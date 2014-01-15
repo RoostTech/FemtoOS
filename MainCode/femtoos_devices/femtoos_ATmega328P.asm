@@ -1,5 +1,5 @@
 /*
- * Femto OS v 0.92 - Copyright (C) 2008-2010 Ruud Vlaming
+ * Femto OS v 0.922 - Copyright (C) 2008-2014 Ruud Vlaming
  *
  * This file is part of the Femto OS distribution.
  *
