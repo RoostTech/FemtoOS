@@ -1,0 +1,30 @@
+\hypertarget{union_ttick}{\section{Ttick Union Reference}
+\label{union_ttick}\index{Ttick@{Ttick}}
+}
+
+
+{\ttfamily \#include $<$femtoos\-\_\-types.\-h$>$}
+
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{union_ttick_a0f80c2f27bf80fa6a0f1507f8724b17b}{Tuint16 {\bfseries Full}}\label{union_ttick_a0f80c2f27bf80fa6a0f1507f8724b17b}
+
+\item 
+\hypertarget{union_ttick_a832f4f124e2f7ad030d1c7b5798442d9}{\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+struct \{\\
+\hypertarget{struct_ttick_1_1@2_a67fed784ba234eeeb6516c0b90b14525}{\>Tuint08 {\bfseries LowByte}\\
+\hypertarget{struct_ttick_1_1@2_a093d52a67a562413f4ac8d4ccf8ca68f}{\>Tuint08 {\bfseries HighByte}\\
+\}; }\label{union_ttick_a832f4f124e2f7ad030d1c7b5798442d9}
+\\
+
+\end{tabbing}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+We use two different types of tick, \hyperlink{union_ttick}{Ttick} and \hyperlink{union_textended_tick}{Textended\-Tick}. The former is used if we have standard tick interrupts (i.\-e. equidistant interrupts) and there is no further need for extra storage. The 16 bit tick counter is kept in two separate bytes, which is more efficient as one 16 bit variable for direct access. However, sometimes it is convenient to have the value as 16 bit word at hand, thus we define a union. 
+
+The documentation for this union was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+Main\-Code/femtoos\-\_\-headers/femtoos\-\_\-types.\-h\end{DoxyCompactItemize}

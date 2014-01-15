@@ -1,0 +1,24 @@
+\hypertarget{struct_tos_data}{\section{Tos\-Data Struct Reference}
+\label{struct_tos_data}\index{Tos\-Data@{Tos\-Data}}
+}
+
+
+{\ttfamily \#include $<$femtoos\-\_\-types.\-h$>$}
+
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{struct_tos_data_aade5ec7c2bb4be35987995cd8db781eb}{Tchar {\bfseries Stack\-O\-S} \mbox{[}Stack\-Size\-O\-S\mbox{]}}\label{struct_tos_data_aade5ec7c2bb4be35987995cd8db781eb}
+
+\item 
+\hypertarget{struct_tos_data_aa5b6b812366ccca4ded29df0f084f6ed}{\hyperlink{struct_ttask_save}{Ttask\-Save} {\bfseries px\-Save}}\label{struct_tos_data_aa5b6b812366ccca4ded29df0f084f6ed}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Since at that time a task is running there is no need for the O\-S stack, we make a union of the background variables and the O\-S stack. Note that this places boundaries of the Stack\-Size (which can be checked), and implies that the structure of \hyperlink{struct_ttask_save}{Ttask\-Save} depends on the direction of stack growth and the alignment of the array and the structure (which is assumed to be top-\/aligned, i.\-e. the lowest used addresses match). Thus this is a delicate matter. Therefore we have the possibility to use a normal struct as well. Note the Stack\-O\-S must be the first field, because of the definition of \-\_\-\-\_\-do\-\_\-stack\-\_\-def\-: in the devices files. (i don't know a way to address x\-O\-S.\-Stack\-O\-S in assembly directly). 
+
+The documentation for this struct was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+Main\-Code/femtoos\-\_\-headers/femtoos\-\_\-types.\-h\end{DoxyCompactItemize}

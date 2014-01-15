@@ -1,0 +1,40 @@
+\hypertarget{struct_ttask_save}{\section{Ttask\-Save Struct Reference}
+\label{struct_ttask_save}\index{Ttask\-Save@{Ttask\-Save}}
+}
+
+
+{\ttfamily \#include $<$femtoos\-\_\-types.\-h$>$}
+
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{struct_ttask_save_a54ea05e0e4c7c1b0146d30fcbf7ae1e4}{Tuint08 {\bfseries r31}}\label{struct_ttask_save_a54ea05e0e4c7c1b0146d30fcbf7ae1e4}
+
+\item 
+\hypertarget{struct_ttask_save_a2ebaef46f74af2534781b41bc2d77dc0}{Tuint08 {\bfseries r30}}\label{struct_ttask_save_a2ebaef46f74af2534781b41bc2d77dc0}
+
+\item 
+\hypertarget{struct_ttask_save_abfb35c9c2b6dc1d49d32d64bcb20a39e}{Tuint08 {\bfseries ui\-Register\-Use}}\label{struct_ttask_save_abfb35c9c2b6dc1d49d32d64bcb20a39e}
+
+\item 
+\hypertarget{struct_ttask_save_aec8e6720833c7c112cecb3cc05fbe390}{Taddress {\bfseries pc\-Stack\-Offset}}\label{struct_ttask_save_aec8e6720833c7c112cecb3cc05fbe390}
+
+\item 
+\hypertarget{struct_ttask_save_a13b1aaff58a8b3a0ae39208c79ac7a83}{Taddress {\bfseries pc\-Stack\-Level}}\label{struct_ttask_save_a13b1aaff58a8b3a0ae39208c79ac7a83}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{struct_ttask_save}{Ttask\-Save} is the structure which holds the \char`\"{}background\char`\"{} variables. These are the variables which are kept while a task is running. In fact, it is a way to communicate information from port\-Restore\-Context to port\-Save\-Context. Also it is used to save some registers temporarily during port(Save/\-Restore)Context. We have two versions depending on the direction of stack growth. Note that, since some of these variables must be retained until the O\-S has restarted, some buffer variables are needed. These keep a save distance between the variables needed and the building O\-S stack. Also, if we have no checking switched on, we can use a shorter version of the \hyperlink{struct_ttask_save}{Ttask\-Save}. The number of buffer variables is 4 at a minimum (2 addresses, namely a call to priv\-Init\-Os() and a possible subsequent call to tcb\-Current(). It is assumed that those functions do not push more variables on the stack. This must be checked. In case we have no checking, only one address is pushed so we need only 2 buffer variables (one address). Please note the the order of the variables is of the utmost importance, do not change it unless you know what you are doing (and believe me, you don't yet). Just to get you going, mark these facts\-:
+\begin{DoxyItemize}
+\item The register-\/copy variables r31-\/r28 are filled at the beginning of the save context and restored at the end, because we must leave all registers untouched. The restore is thus done after the stack change to O\-S. Thus these variables may not be overwritten, and therefore the place to store them is as far as possible from the return address that is placed upon the O\-S stack.
+\item ui\-Stack\-T\-Check, ui\-Register\-Check and ui\-Register\-Use are used to check the result of the context switch in priv\-Init\-O\-S. Depending on their values, the task may be terminated. So these values should survive the first method calls to and in priv\-Init\-O\-S.
+\item in standard operation, no registers are needed from the background variables after a return from save context. However, when checks are in place, some variables are read after the return. Those variables must be preserved upon the return. The return itself destroys at least 2 (3 for mega256) bytes, and after return there must be room for two consecutive jumps, i.\-e. 4 (6) bytes.
+
+Note\-: make sure that any change in this structure is reflected in the def\-Task\-Save\-Size constant! 
+\end{DoxyItemize}
+
+The documentation for this struct was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+Main\-Code/femtoos\-\_\-headers/femtoos\-\_\-types.\-h\end{DoxyCompactItemize}

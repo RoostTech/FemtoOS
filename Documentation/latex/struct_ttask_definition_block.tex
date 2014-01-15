@@ -1,0 +1,21 @@
+\hypertarget{struct_ttask_definition_block}{\section{Ttask\-Definition\-Block Struct Reference}
+\label{struct_ttask_definition_block}\index{Ttask\-Definition\-Block@{Ttask\-Definition\-Block}}
+}
+
+
+{\ttfamily \#include $<$femtoos\-\_\-types.\-h$>$}
+
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{struct_ttask_definition_block_a9739e24eceb90dce22418de3be734bc4}{const Taddress {\bfseries pc\-Stack\-Offset}}\label{struct_ttask_definition_block_a9739e24eceb90dce22418de3be734bc4}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Per task we have one task definition block which holds all static information of a task. This includes the use and checking of registers, status, the initial priority, the initial state of the interrupts (global and tick) the maximal stack size, the place where in ram the stack starts off, the length of a time slice, the runtime task name. Not all fields must be present, this depends on the settings of the configuration parameters. The order of fields may not be changed, since this variable is placed in flash, and is filled by preprocessor generated sequences. 
+
+The documentation for this struct was generated from the following file\-:\begin{DoxyCompactItemize}
+\item 
+Main\-Code/femtoos\-\_\-headers/femtoos\-\_\-types.\-h\end{DoxyCompactItemize}
