@@ -1,0 +1,363 @@
+Femto OS v 0.912 - Copyright (C) 2008-2009  Ruud Vlaming
+
+This file is part of the Femto OS distribution.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Please note that, due to the GPLv3 license, for application of this
+work and/or combined work in embedded systems special obligations apply.
+If these are not to you liking, please know the Femto OS is dual
+licensed. A commercial license and support are available.
+See http://www.femtoos.org/ for details.
+
+ENCLOSED PLEASE FIND
+
+- License GPLv3
+- Install scripts for various environments
+- Femto OS code
+- examples
+- patches for the tool chain
+- schematics for hardware
+- binaries for all ports
+- eclipse project files
+
+
+FIRST THINGS FIRST
+
+First of all, there may be last minute changes, that did not make
+it to this distribution, or that have been discovered after release.
+They can always be found on the forum 'Releases' on Source Forge:
+Please always look there first:
+  https://sourceforge.net/projects/femtoos/forums
+It maybe wise to monitor that forum (click the 'monitor' button
+after login) so that anything i might post there reaches you.
+
+
+GETTING STARTED:
+
+In any case you need a tool chain. If you already have your homebrew own,
+that's fine, just copy the C files in your environment. For your already
+present WinAVR instructions are given below. The distribution contains
+a complete toolchain builder for windows/linux/macos with recent files
+and patches, in case you don't have anything yet.
+
+Code is only tested for the tool chain as installed by the script.
+See below how this can be installed. The script installs a gcc version
+4.3.3 with fully patched avr.c backend. These patches are required.
+All installs are local, no root access needed.
+
+In case you already have a possibility to flash you can start flashing
+the binaries as delivered in the FemtoOS_0.912/MainCode/binaries directory.
+These are raw files and can be flashed without much preparation. Only
+thing you have to do is make sure the fuses are set for an internal
+clock running 8MHz. Use whatever tool you like to flash the binaries
+to your device (avrdude for example). You can also use the flash
+script from the toolchain to perform these tasks for you. See below.
+
+For now we assume you want to install the toolchain. It works in its
+own directory only so you can use this aside from you already present
+toolchain if you wish. Although there are little differences for the
+toolchain itself between the different platforms, there is some preparation.
+
+For windows you have two choices. Usage of my toolchain or using WinAVR
+(that you have to install yourself). If you do not want to make use
+of my gcc toolchain you may skip that part. If you do not want to make
+use of my compile and flash scripts either, you may even skip the
+cygwin installation (see below). Installing cygwin and my toolchain
+does not hinder you in using WinAVR later in any way.
+
+And, although you have not written any line of code yet, i start
+with a warning:
+  If you want to start experimenting do so in the Hello World
+  example and not in the other examples. They will most certainly
+  not run any more after even minor changes or additions. This
+  is because these examples are already 'optimized', an
+  optional step in Femto OS making it possible to reduce
+  ram/flash usages tremendously, but done after your code is
+  finished. See the website for more information.
+
+
+WINDOWS WITH WINAVR AND AVR STUDIO
+
+If you want to work solely with WinAVR and AVR STUDIO, and do not
+need any of my scripts, this paragraph is the only thing you need
+to read. Unfortunately AVR Studio is not able to flash raw binaries
+so you cannot test the distributed examples on before hand.
+
+After unpacking the zip at a suiteable location, start the
+command line and go to the directory FemtoOS_0.912, then:
+
+ cd FemtoOS_0.912
+ Install_Scripts\install_avrstudio_workspace.bat
+
+That's it! Now fire up AVR Studio (i use 4.18, other versions
+i have not tested) and open a project in one of the demo
+directories in the FemtoOS_0.912\IDE\studioprojects directory.
+
+You should now be able to do
+  Build | Rebuild All
+and flash the result. Please always rebuild all to guarantee
+all dependencies are handled.
+
+If you open
+  Edit | Configuration options
+there are few things that require attention.
+
+1) You can choose between two configurations, namely 'Standard'
+   and 'Compact' The latter builds much denser code, but is
+   not suited for self written code to start with. You can
+   use if for the examples though.
+
+2) Do not click on 'Memory Settings' tab in this window. This
+   is because AVR Studio does not understand the 'Initial Stack
+   Address' and tries to convince you to alter or delete it.
+   Do no such thing and press 'Cancel'. If this is removed,
+   compilation will not be possible any more.
+
+
+WINDOWS WITH CYGWIN PREPARATION 
+
+Installing on windows requires a cygwin environment. Admitted, there are
+other ways, but this is what i used. Download the latest from the web:
+http://www.cygwin.com/ This is probably a good idea anyway, since it
+also updates your old cygwin version.
+Note that in addition to the default package you need at least
+  automake
+  binutils
+  bison
+  flex
+  gcc-core
+  gcc-g++
+  libtool
+  make
+  patch
+  openssl
+  wget
+packages. These must manually (!!) be selected in the tool. Best is to check
+wether the install succeeded by typing those in commands in the bash.
+You can also select a full download, which may end above the 1GB!
+An other point to keep in mind is that you must select a mirror in the
+setup process, but not all mirrors install the same tools. 
+Here you can get useful tips when you have troubles.
+  http://www.nongnu.org/avr-libc/user-manual/install_tools.html
+When installing using cygwin, make sure you have you path not
+directing to some older version of WinAVR or so, the script will not run.
+Probably, you must manually and c:\cygwin\bin to your path, at least check.
+
+
+MAC PREPARATION 
+
+I assume you have a recent version of Mac OS X 10.5 (Leopard), earlier
+version may or may not work. I did not test Snow Leopard Standard yet. tools
+for making and building C programs are not present, thus you might need to
+install these. The best way to do this is to install Xcode.
+A bit bulky in relation to what we need (1GB), but good stuff.
+Further, you need wget, libtool etc and these are ... not installed on your Mac.
+The best way to install it is to first install Darwin ports.
+  http://darwinports.com/
+After that install wget using the instructions on 
+  http://wget.darwinports.com/
+Be patient while it is installing, it can take really a while.
+Again it is a good idea to test if the necessary components are present
+by typing them into a terminal. Install other missing packages the same way.
+
+Note: when avrdude is build by my toolchain, it sometimes does not recognize
+the libusb, even if it is installed on your system. Result: no flash over
+usb. With darwinports you can install avrdude as well, and that version
+will work (make sure it is the latest!). Subsequently use the option 'system'
+on the flash script, to make use of the system avrdude.
+
+
+LINUX PREPARATION 
+
+There does not exists something like "linux". There are so many different flavors
+that i don't know where to start. Fortunately, most of them have gcc, make etc
+installed per default, and otherwise, you will probably know how to get these
+in your machine. Having said that, you can run the scripts "out of the box"
+when using the gentoo, and under ubuntu you may have to install some extra
+packages (do that on beforehand, if you don't error may occur that seem
+not related to absent packages, thanks to Carsten Foss <tp@luna.dyndns.dk>
+for pointing this out.)
+Ubuntu:
+  sudo apt-get install build-essential automake autoconf libncurses5-dev texinfo texi2html
+  sudo apt-get install libcwidget-dev tcl8.4-dev tk8.4-dev libx11-dev
+  sudo apt-get install binutils-dev
+  sudo apt-get install bison flex
+  sudo apt-get install libusb-0.1-4 libusb-dev
+(if some of these installs fail, your ubuntu is not up to date, fix that first)
+
+
+INSTALLING THE TOOLCHAIN
+
+Commands are done for windows, linux and Mac alike, under windows make sure
+you run from within the cygwin bash. You can remotely use X11 under the Mac.
+Prepare your machine as required  If you already have a toolchain on your
+system, you can skip this part.
+
+The script builds the cross-compiler for you, including the required gmp and mpfr
+libraries. Maybe it is best to first get more info with
+
+ cd FemtoOS_0.912/
+ ./Install_Scripts/install_toolchain --help
+
+and try if all the tools you need are installed on your system:
+
+ ./Install_Scripts/install_toolchain --test
+
+On Mac you may get a warning that the version of some tools cannot be determined.
+For ar/install/libtool/touch this is probably ok, these do not give version numbers.
+Just make sure you have recent versions.
+
+If all is well, call the script you need:
+
+on cywin:   ./Install_Scripts/install_toolchain  --slow
+on linux:   ./Install_Scripts/install_toolchain
+on mac:     ./Install_Scripts/install_toolchain
+
+
+The script may take a considerable amount of time, depending on the hardware,
+it may take even more than an hour under cygwin. If the script fails (likely) then
+you may correct the error (probably you need to add some system dependant option
+somewhere) and restart it. It continues at the point of error (to the best of its
+knowledge).
+
+If the script will be a success is the result of many environment related factors
+and most of them are beyond my control. You need for example have the proper
+GCC installed just to build the cross-compiler.
+If you want to restart the script from the beginning, use the clean option first.
+
+ ./Install_Scripts/install_toolchain --clean
+
+This may be called after a successful toolchain install also, to free-up some
+space. The installed executables are left alone, as are the downloads.
+(So if you have a crippled download file, remove it by hand, clean and rerun)
+Please note that installing tool chains is always a tricky business. What works
+on one machine, may not work on another. Please  share your experiences with
+me, so we can improve on this.
+
+
+INSTALLING ALL EXAMPLES
+
+Commands are done for windows, linux and Mac alike, under windows make sure
+you run from within the bash. Again, make sure you are in the FemtoOS_0.912
+directory and call the script you need:
+
+cywin:    ./Install_Scripts/install_eclipse_workspace copy
+linux:    ./Install_Scripts/install_eclipse_workspace
+macbook:  ./Install_Scripts/install_eclipse_workspace 
+
+
+The cygwin option 'copy' is to make sure the workspace does not contain windows
+shortcuts. The point is, Eclipse cannot handle them. The disadvantage being
+a whole lot of copies. (Note: NTFS junctions are NO alternative.)
+
+
+COMPILING
+
+At this point we can try to compile something with the toolchain just
+made (substitute the device you have for 'atmega8')
+
+  cd IDE
+ ./script/compile Bare atmega8  compact
+
+which should give
+
+  text    data     bss     dec     hex    device      project
+   258       0      10     268     10c    atmega8     Bare
+
+If you want to make use of your own toolchain, just add the option
+'system' (the toolchain must be on the search path)
+
+  cd IDE
+ ./script/compile Bare atmega8  compact system
+
+and this may lead to different figures. If it does not work at all,
+your toolchain is probably to old or not correctly patched.
+
+Now you have also deleted all precompiled raw binaries, so that's why
+you should have tried them first. But you can regenerate them with
+
+ ./script/compile all cross compact 
+
+Get more options with:
+
+ ./script/compile --help
+
+
+FLASHING
+
+After compilation, you can use the avrdude via a flash script
+for easy flashing (but it only flashes our projects). Try
+
+ ./script/flash Bare atmega8 /dev/ttyS1 stk500v2
+
+where you can replace '/dev/ttyS1' by 'usb' or any other way you
+have connected your development board to your PC; and replace
+'stk500v2' by your development board type, for example 'usbasp'.
+If parameters are constant, you can leave them out on the next
+run, so just compile and flash the next project with:
+
+ ./script/compile FlashLeds
+ ./script/flash 
+
+If your device is kind of slow, propably you are on the factory
+setting of 1MHz for your device. The flash tools helps you to set
+this straight, for example
+
+ ./script/flash atmega8 8MHz
+
+This changes the fuses so that the device switches to the internal
+oscillator and starts up with 8MHz. Other settings are left alone.
+This works for all supported devices. BTW, you cannot set it to
+other settings with this tool, so 8MHz is a fixed setting.
+
+
+ECLIPSE
+
+The projects in the workspace just generated can be imported into
+eclipse (Ganymede, CDT version). At eclipse start up point to the
+generated workspace directory. Then switch off automatic
+build first:
+
+  Project | ( ) Build Automatically  
+
+Subsequently only thing to do is select in on the workbench and import the projects
+
+  File|import|General|Existing projects into Workspace
+
+All project settings are allready correct (compiler options, calling etc)  but
+you need to have proper tools set to be able to compile (make etc),
+but i assume that will not be a problem. Make sure you choose the 'standard'
+configuration setting and not the 'compact' to start with. The latter
+builds much denser code, but is not suiteable for self written code
+in the beginning.
+
+
+QUALITY ASSURANCE
+
+Before releasing a new package i test the demos in several ways.
+For me the main development targets are the attiny861 and the atmega328p.
+I test all demos on these devices thoroughly, both the standard and the
+optimized versions. For all other devices i test both versions shortly,
+i let them run for one minute or so. I only test under Linux using my
+toolchain in the distribution. If you use an other toolchain, examples
+will probably NOT run, due to aggressive optimization. In that case,
+try the HelloWorld example first.
+
+See the website for a more elaborate discussion.
+
+
+Have great fun!
+Ruud Vlaming
+
+

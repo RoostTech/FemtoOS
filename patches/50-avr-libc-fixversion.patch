@@ -1,0 +1,75 @@
+--- bootstrap	2008-09-19 15:43:17.000000000 +0200
++++ bootstrap	2009-01-30 21:38:18.000000000 +0100
+@@ -1,41 +1,57 @@
+-#! /bin/sh
++#!/bin/bash
+ #
+ # $Id: bootstrap,v 1.4.2.3 2008/09/19 13:43:17 joerg_wunsch Exp $
+ #
+ # bootstrap script to build all the *.in files and configure script.
+ #
+ 
+-# autoconf-2.59, 2.60, 2.61, or 2.62 is required
++function version()
++{ # Simple version normalizer by Ruud Vlaming (ruud@betaresearch.nl)
++  echo $1 | sed -e 's/$/ /' -e 's/^/ /' \
++    -e 's/^.*[v ]\([0-9]\)\.\([0-9].*\)$/ 0\1.\2 /' \
++    -e 's/^.*[v ]\([0-9][0-9]*\.[0-9][0-9]*\)[- ].*$/ \1 /' \
++    -e 's/^.*[v ]\([0-9][0-9]*\)\.\([0-9]\)[- ].*$/ \1.0\2/' \
++    -e 's/^.*[v ]\([0-9][0-9]*\.[0-9\.]*\).*$/ \1/' \
++    -e 's/^.*[v ]\([0-9][0-9]*\)\.\([0-9]\)\.\(.*\)$/ \1.0\2\.\3/' \
++    -e 's/^.*[v ]\([0-9][0-9]*\)\.\([0-9]*\)\.\([0-9]\)\.*$/ \1.\2\.0\3/'
++}
++
++# at least autoconf-2.59 is required
+ 
+ : ${AUTOHEADER="autoheader${AC_VER}"}
+ : ${AUTOCONF="autoconf${AC_VER}"}
+ 
+-# automake-1.8.x, 1.9.x, or 1.10.x is required
++# at least automake-1.8.x, is required
+ 
+ : ${ACLOCAL="aclocal${AM_VER}"}
+ : ${AUTOMAKE="automake${AM_VER}"}
+ 
+ # Verify autoconf version
+ 
+-AUTOCONF_VER=`(${AUTOCONF} --version 2>/dev/null | head -n 1 | \
+-              cut -d ' ' -f 4) 2>/dev/null`
+-if [ "$AUTOCONF_VER" != "2.59" -a "$AUTOCONF_VER" != "2.60" -a "$AUTOCONF_VER" != "2.61" \
+-     -a "$AUTOCONF_VER" != "2.62" ]
++AUTOCONF_VER=`(${AUTOCONF} --version | head -n 1 2>/dev/null)`
++AUTOCONF_MIN="2.59"
++AUTOCONF_TST=`version "$AUTOCONF_VER"`
++AUTOCONF_CMP=`version "$AUTOCONF_MIN"`
++
++if [ $AUTOCONF_TST \< $AUTOCONF_CMP ]
+ then
+-	echo "You need to use autoconf version 2.59, 2.60, 2.61, or 2.62."
+-	echo "You are using `${AUTOCONF} --version | head -n 1`."
++	echo "You need to use autoconf version >= $AUTOCONF_MIN "
++        echo "You are using $AUTOCONF_VER."
+ 	exit 1
+ fi
+ 
+ # Verify automake version
+ 
+-AUTOMAKE_VER=`(${AUTOMAKE} --version | head -n 1 | \
+-              cut -d ' ' -f 4 | cut -d '.' -f -2) 2>/dev/null`
+-if [ "$AUTOMAKE_VER" != "1.8" -a "$AUTOMAKE_VER" != "1.9" -a "$AUTOMAKE_VER" != "1.10" ]
++AUTOMAKE_VER=`(${AUTOMAKE} --version | head -n 1 2>/dev/null)`
++AUTOMAKE_MIN="1.8"
++AUTOMAKE_TST=`version "$AUTOMAKE_VER"`
++AUTOMAKE_CMP=`version "$AUTOMAKE_MIN"`
++
++if [ $AUTOMAKE_TST \< $AUTOMAKE_CMP ]
+ then
+-	echo "You need to use automake version 1.8, 1.9, or 1.10."
+-	echo "You are using `${AUTOMAKE} --version | head -n 1`."
+-	exit 1
++        echo "You need to use automake version >= $AUTOMAKE_MIN "
++        echo "You are using $AUTOMAKE_VER."
++        exit 1
+ fi
+ 
+ AUTOMAKE="${AUTOMAKE} --foreign --add-missing --copy"

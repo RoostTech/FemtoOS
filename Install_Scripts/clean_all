@@ -1,0 +1,32 @@
+#!/bin/bash
+
+
+if [[ $1 != "force" ]]
+then
+  echo "Prepares this directory for publication on Source Forge. It removes all(!)
+files not needed to that end. Please have a look inside the script before
+executing. There is no 'undo' possibility!"
+  exit 0
+fi
+
+if [ -d Install_Scripts ]
+then
+  echo "=== Cleaning up"
+else
+  echo "Start me in the FemtoOS_[version] directory of the Femto OS distribution, with ./Install_Scripts/clean_all "
+  exit 0
+fi
+
+if [[ $1 == "force" ]]
+then
+  rm -rf download
+  rm -rf IDE/workspace
+  rm -rf IDE/proc
+  rm -rf IDE/script/default_*
+  rm -rf MainCode/binaries/compile_results
+  rm -rf MainCode/registers
+  rm -rf AuxCode/ShellTrace/Output/*.dcu
+  rm -rf log
+  rm -rf temp
+  find ./ -follow -type f -name ".*~" -exec rm -f {} \;
+fi

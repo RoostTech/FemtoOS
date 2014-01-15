@@ -1,0 +1,63 @@
+#!/bin/bash
+
+
+if [ -d Install_Scripts ]
+then
+  echo "=== Creating project $1"
+else
+  echo "Start me in the FemtoOS_[version] directory of the Femto OS distribution, with ./Install_Scripts/create_eclipse_project"
+  exit 0
+fi
+
+PROJECT=$1
+mkdir -p                                                            IDE/workspace/FemtoOS_$PROJECT
+rm -rf                                                              IDE/workspace/FemtoOS_$PROJECT/*
+mkdir                                                               IDE/workspace/FemtoOS_$PROJECT/include
+mkdir                                                               IDE/workspace/FemtoOS_$PROJECT/src
+
+cp -rfp Install_Scripts/eclipse/settings                            IDE/workspace/FemtoOS_$PROJECT/.settings
+sed s/XXXXX/$PROJECT/ Install_Scripts/eclipse/cproject_template >   IDE/workspace/FemtoOS_$PROJECT/.cproject
+sed s/XXXXX/$PROJECT/ Install_Scripts/eclipse/project_template  >   IDE/workspace/FemtoOS_$PROJECT/.project
+
+if [[ $2 == "copy" ]]
+then
+  mkdir                                                             IDE/workspace/FemtoOS_$PROJECT/devices
+  cp -rfp MainCode/femtoos_devices/*                                IDE/workspace/FemtoOS_$PROJECT/devices/
+  cp -rfp MainCode/femtoos_headers/femtoos_check.h                  IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_code.h                   IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_constants.h              IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_core.h                   IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_globals.h                IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_locals.h                 IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_order.h                  IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_port.h                   IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_shared.h                 IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_types.h                  IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/femtoos_headers/femtoos_device.h                 IDE/workspace/FemtoOS_$PROJECT/include/
+  cp -rfp MainCode/demos_headers/config_Test$PROJECT.h              IDE/workspace/FemtoOS_$PROJECT/include/config_application.h
+  cp -rfp MainCode/femtoos_source/femtoos_core.c                    IDE/workspace/FemtoOS_$PROJECT/src/
+  cp -rfp MainCode/femtoos_source/femtoos_port.c                    IDE/workspace/FemtoOS_$PROJECT/src/
+  cp -rfp MainCode/femtoos_source/femtoos_startup.s                 IDE/workspace/FemtoOS_$PROJECT/src/
+  cp -rfp MainCode/femtoos_source/femtoos_shared.c                  IDE/workspace/FemtoOS_$PROJECT/src/
+  cp -rfp MainCode/demos_source/code_Test$PROJECT.c                 IDE/workspace/FemtoOS_$PROJECT/src/
+else
+  ln -s ../../../MainCode/femtoos_devices                           IDE/workspace/FemtoOS_$PROJECT/devices
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_check.h        IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_code.h         IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_constants.h    IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_core.h         IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_globals.h      IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_locals.h       IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_order.h        IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_port.h         IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_shared.h       IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_types.h        IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/femtoos_headers/femtoos_device.h       IDE/workspace/FemtoOS_$PROJECT/include/
+  ln -s ../../../../MainCode/demos_headers/config_Test$PROJECT.h    IDE/workspace/FemtoOS_$PROJECT/include/config_application.h
+  ln -s ../../../../MainCode/femtoos_source/femtoos_core.c          IDE/workspace/FemtoOS_$PROJECT/src/
+  ln -s ../../../../MainCode/femtoos_source/femtoos_port.c          IDE/workspace/FemtoOS_$PROJECT/src/
+  ln -s ../../../../MainCode/femtoos_source/femtoos_startup.s       IDE/workspace/FemtoOS_$PROJECT/src/
+  ln -s ../../../../MainCode/femtoos_source/femtoos_shared.c        IDE/workspace/FemtoOS_$PROJECT/src/
+  ln -s ../../../../MainCode/demos_source/code_Test$PROJECT.c       IDE/workspace/FemtoOS_$PROJECT/src/
+fi
+

@@ -1,0 +1,236 @@
+/*
+ * Femto OS - Copyright (C) 2008-2011  Ruud Vlaming
+ *
+ * This file is part of the Femto OS distribution.
+ */
+
+plans for 0.93 => 0.94
+(1)  Feature to determine tasks that run 100% load.
+(2)  Simple heapmanager
+(3)  Port of shell application to other avr hardware
+(4)  cross platform terminal en trace facility.
+
+plans for 0.922 => 0.93
+(1)  xmega support
+
+changes 0.92 => 0.922 [23.06.2011]
+(1) Corrected two minor bugs in femto os core
+(2) Upgrade to AVR Studio 5
+
+changes 0.912 => 0.92 [18.02.2010]
+(1)  Added taskQueuRequestOnName() method for convineance
+(2)  Added cfgUseSuspendOnDelay to make it easier to handle suspend requests.
+(3)  Added genQueuUnread() and genQueuUnwrite to undo queue operations,
+     handy in failing communications.
+(4)  minor fixes
+
+
+changes 0.91 => 0.912 [26.11.2009]
+(1)  fixed bug for several demo's (FlashLeds broken)
+(2)  Support for WinAVR and AVR Studio (with installer)
+(3)  minor fixes
+
+changes 0.89 => 0.91 [15.10.2009]
+(1)  taskKillTask,taskRestart become taskTerminate, taskRecreate
+(2)  Rewrote switchblock handling, now handles watchdog, blocking,
+     delays, file system operations etc in a senseable manner.
+(3)  Accuracy of timemeasurement of taskmanager improved (a little)
+(4)  Introduction of the shared stack, task that not need to run
+     simultaneaously may share the stack. Shared task run cooperative
+     among each other, but preemptive with the other tasks.
+(5)  Suspension of tasks now required cooperation of the task to be
+     suspended. In prior implementations the result of suspend was
+     unclear. Blocked tasks where ignored, whereas suspendig tasks
+     holding locks where also blocking other tasks. 
+(6)  Introduced to extra tests on stackusage, on of which explictly
+     checks a predefined savety region of the stackspace.
+(7)  Extended the trace possibilities, userwords can now be traced
+     as well as taskloads, os timing, watermarks and registeruse.
+(8)  Corrected a few typo's in the code and auxiliary scripts
+(9)  Introduced hierarchical round robin prioritizing. This makes
+     sure no lower priority tasks are starved from execution in
+     case of regular alternating task switches.
+(10) Introduced prioritized release to force the unblocking in
+     the highest priority when needed.
+(11) Solved bug in load measurement of isr's.
+(12) Extended error messages with function number.
+(13) Redefinition of all error callId's (and thus trace ID's)
+
+changes 0.88 => 0.89 [11.09.2009]
+(1) Made possible the separation between background variables and stack os.
+(2) Introduce several other internal memory protection measures against
+    agressive optimization of gcc.
+(3) Adjustments to the installer
+(4) 13 new ports
+(5) New HelloWorld example and getting started guide.
+(6) Improved compile and flash script. Spits out info about internal numbering.
+
+changes 0.87 => 0.88 [06.02.2009]
+(1) Solved bug, priority was not correctly restored after lifting.
+(2) Reintroduced tick interrupt blocking, but now implemented correctly.
+    This was needed since without the possibility to enable/disable
+    tick interrupts it was not possible to run in cooperative mode.
+    Functionality regarding switch critical is kept.
+(3) Solved bug, tickcounter was not increased in case all tasks where in
+    the cooperative mode.
+(4) Solved a bug in the genLogTask that served incorrect values for
+    Task Load measurement (cumulative values were passed instead of
+    totals).
+(5) Improved and expanded error handling, it is now possible to mark
+    all errors as fatal, that gives you more time to inspect what
+    went wrong in your code. Errors inside isr are fatal per default.
+(6) Orthogonalized configuration parameters somewhat more, and i
+    renamed a few methodes. I am not completely satisfied yet, but
+    for now it must be sufficient. Removed vfgBoolReturn which is
+    now default with cfgTimeout
+(7) Removed backend hack for the compiler, use of OS_task attribute
+    is a suitable replacement.
+(8) Improved the toolchain installation script.
+
+
+changes 0.86 => 0.87 [28.11.2008]
+(1)  Added the support for stacks larger as 255 bytes. The preprocessor
+     determines if the extra code needs to be compiled in. Furthermore,
+     if all stacks fit in the zeroth ram page, the SP_H is set permanently
+     to zero. (Saves some bytes on the really small devices)
+(2)  The sleeptime was calculated assuming the tickrate was fixed at approx 1000Hz.
+     However, this need not to be true, this has been corrected. Furthermore
+     configuration parameters have been added to set several prescalers and
+     the clock frequency.
+(3)  Extra preprocessor functions that make live easy.
+(4)  Ports to 30 new devices, most examples run on all devices now,
+     (depending on the available hardware of course).
+(5)  For tracing, USI support has been removed and has been replaced by
+     bitbanging. This is much more portable.
+(6)  isrFireEvent introduced for those devices that do not have a GPIO register.
+(7)  Solved a (non critical) bug in the way the file system handled sleeping.
+(8)  Setting tick interrupts is removed. It turned out that even if tick
+     interrupts where disabled, tasks could still switch (through an other
+     interrupt with forced context switch. Thus i changed
+     'enter/exit tick critical' into 'enter/exit switch critical'. This is
+     still interrupted by a tick, but you can be sure no other tasks get
+     started.
+(9)  The used of the T bit has been changed. There is no more need for external
+     storage upon context switch. (Not all devices have a register free). Since
+     this new trick utilizes the H flag (lost upon context switch) it is still
+     possible if needed.
+(10) Changed from gcc-4.2.3 libc-1.61 binutils-2.18 to gcc-4.3.2 and libc-1.6.2
+     binutils-2.18. (All fully pathced) A hacked backend is no longer needed due
+     to the availability of the OS_task attribute. Bikini maps to that attribute.
+(11) Support for three bytes pc on the stack (mega256x)
+
+changes 0.85 => 0.86 [23.08.2008]
+(1)  Added the support for a file system, which required the major
+     change in the way blocking is handled inside the Femto OS.
+(2)  Removed the need for volatile variables, reduced footprint
+(3)  Introduced anonymous unions for the tickcounter, reduced code
+(4)  Added support for named events which can be fired from every
+     location (isr, tasks, barks) and which are also usable when
+     the core is interruptible.
+(5)  Added the support for capabilities to be defined per task. The
+     gives a find grained mechanism for the preprocessor to further
+     optimize then code. Saves ram and flash.
+(6)  API was changed on several points to reflect the new possibilities
+(7)  Solved a critical bug in the portRestore methode, registers r3-r0
+     were not saved correctly in some situations, resulting in a crash.
+
+changes 0.841 => 0.85 [18.06.2008]
+(1)  genKill changed into taskKill due to the fact that we must be
+     able to clean the slotstack en release the blocking tasks that
+     were hold by the killed task.
+(2)  Corrected a (very rare) situation where a task could be barked
+     at by the watchdog, while in a blocked state and return blocked
+     without any locks stored. Now, a recreated task always will
+     be non blocked and non delayed.
+(3)  Suspend is not longer possible on blocked tasks for we have no
+     mechanism to release the blocks after resume. It is still possible
+     when it holds locks and is running, but it would be unwise to
+     suspend such a task.
+(4)  Several internal changes.
+Note : version 0.85 was never released as a seperate version.
+
+changes 0.84 => 0.841 [10.06.2008]
+(1)  Updated installation toolchain.
+
+changes 0.83 => 0.84 [02.06.2008]
+(1)  The synchronization mechanism was rewritten. The main improvement
+     is that it is now possible to simultaneously lock on two queu's
+     or mutexes. So if you need two resources there is no need to
+     spinlock. If you need more as two, this is still needed, but those
+     cases are much more rare. In the same proces the footprint for
+     using single locks has been reduced.
+(2)  Only tasks really needing locks by them selfes consume room for
+     the slotstack now. This reduces the need for ram, depening on the
+     task.
+(3)  Mutexes are no longer called 'SyncLock', but simply 'mutex'.
+     Rendez vous is always multiple now, if you need waiting only for
+     one other task, supply 2 as parameter, or use the forOne macro.
+     Futhermore Mutexes are now treated as a special kind of queue.
+     These steps reduced code duplication.
+(4)  Delay information is only stored in the tcb if needed, may reduce
+     ram in particular applications. The parameter cfgUseDely was introduced.
+(5)  In any (external) call that expects an tasknumber you may now supply
+     defCurrentTaskNumber. This is only allowed when you are inside
+     a real task (code that has been reached from Loop_XXX). From init,
+     bark or isr it is strictly forbidden. You can also supply
+     defCurrentTaskName in a XXXOnName Call, this has the same effect.
+(6)  There have been several changes in the api to make naming
+     more consistent and clear.
+ 
+changes 0.82 => 0.83 [29.04.2008]
+(1) There was a problem with functions declared naked, and the gcc
+    needing a framepointer on those functions. Although there may
+    not be a need for a framepointer in a strict sense (for example
+    there are still registers free) gcc may decide to use one anyway,
+    Even if you compile with -fomit-frame-pointer. If one is used
+    while not being setup we have a problem. To resolve several
+    solutions are possible.
+    - make all functions standard (noretrun will not do, most
+      functions do return albeit by a 'virtual' return). This cost
+      quite a lot of code. It is made possible by and extra
+      configuration parameter.
+    - make all functions naked and let a script check for frame-
+      pointers and warn about it, and install a counter measures
+      framepointer option. This is possible also via an extra
+      configuration parameter.
+    - hack the avc.c backend and introduce the bikini attribute,
+      which only sets up the frame pointer, but does not save any
+      registers. This is done too.
+    Per default all functions are defined bikini which falls back
+    to naked on standard gcc. None of the solutions is ideal, it
+    would be a lot better if the compiler would really obey the
+    -fomit-framepointer compiler option, which is almost always
+    possible, and certainly in the situations i saw gcc using
+    a framepointer.
+Note: version 0.83 was never released as a seperate version.
+
+changes 0.80 => 0.82 [31.03.2008]
+(1)  Changes to the comments
+(2)  Slots are no longer default with every task when used (saves bytes)
+(3)  Tasks can hold more than one slot, to be determined by the
+     SlotSize_Task parameter. Maximum set to 6 simultaneous slots.
+(4)  Tasks are numbered 0..M for those who use slots, M+1..N for the rest,
+     i.e. the tasks with slots have the lowest tasknumber. The number of
+     tasks with slots is cfgNumberOfTasksWithSlot, so that always:
+     cfgNumberOfTasksWithSlot <= cfgNumberOfTasks
+(5)  With the property above, all loops over tasks with slots could be
+     reduced to loop only over those tasks possibly having slots, thus
+     reducing overhead.
+(6)  Slots should now be used for one type only, i.e. the type is coupled
+     staticly to the slot number. This reduces the flexibilty somewhat
+     but makes confusion less likely and checking easier. Queus have the
+     lowest slot numbers, followed by the mutexes followed by the
+     rendez vous (wait locks)
+(7)  TaskControlBlock has become of variable length holding the
+     slots of a task in a dummy array. Note reading a non existing slot
+     may result in a full crash, check!
+(8)  Fields uiGlobTick and uiSemaDog (i never liked the names) have been
+     replaced by uiTaskMonitor and uiTaskSlot. Also, some bitfields changed
+     sides. This lead to increase of some of the examples.
+(9)  Internal changes to types and code
+(10) Extra example that makes use of multiple slots. FemtoOS_Passon
+(11) Removed cfgCheckSynchronization
+(12) Adjusted Shell task and communication program to cope with
+     new slots. Note you cannot use the new communication program
+     on the old Shell task and vice versa.
+

@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+# Femto OS v 0.92 - Copyright (C) 2008  Ruud Vlaming
+#
+# This file is part of the Femto OS distribution.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Please note that, due to the GPLv3 license, for application of this
+# work and/or combined work in embedded systems special obligations apply.
+# If these are not to you liking, please know the Femto OS is dual
+# licensed. A commercial license and support are available.
+# See http://www.femtoos.org/ for details.
+
+# Use this as external tool from eclipse to flash and automatically detect
+# which device was set in the options. The working directory must be the
+# IDE Calling convention
+#   eclipse_flash <board> <connection> <hexfilename>
+
+# $1: ${project_loc}/Release
+
+
+WorkDir=$PWD
+ToolDir=$WorkDir/proc/bin
+ConfDir=$WorkDir/proc/etc
+ScriptDir=$WorkDir/script
+DevID=""
+
+Board=$1
+Comport=$2
+HexFile=$3
+
+function translate_device()
+{ local GDO=$1
+  if [[ $GDO == "-mmcu=attiny2313" ]];  then DevID="t2313";    fi
+  if [[ $GDO == "-mmcu=attiny43u" ]];   then DevID="t44 -F";   fi
+  if [[ $GDO == "-mmcu=attiny48" ]];    then DevID="t88 -F";   fi
+  if [[ $GDO == "-mmcu=attiny88" ]];    then DevID="t88";      fi
+  if [[ $GDO == "-mmcu=attiny24" ]];    then DevID="t24";      fi
+  if [[ $GDO == "-mmcu=attiny44" ]];    then DevID="t44";      fi
+  if [[ $GDO == "-mmcu=attiny84" ]];    then DevID="t84";      fi
+  if [[ $GDO == "-mmcu=attiny25" ]];    then DevID="t25";      fi
+  if [[ $GDO == "-mmcu=attiny45" ]];    then DevID="t45";      fi
+  if [[ $GDO == "-mmcu=attiny85" ]];    then DevID="t85";      fi
+  if [[ $GDO == "-mmcu=attiny261" ]];   then DevID="t261";     fi
+  if [[ $GDO == "-mmcu=attiny461" ]];   then DevID="t461";     fi
+  if [[ $GDO == "-mmcu=attiny861" ]];   then DevID="t861";     fi
+  if [[ $GDO == "-mmcu=atmega162" ]];   then DevID="m162";     fi
+  if [[ $GDO == "-mmcu=atmega325" ]];   then DevID="m325";     fi
+  if [[ $GDO == "-mmcu=atmega3250" ]];  then DevID="m3250";    fi
+  if [[ $GDO == "-mmcu=atmega645" ]];   then DevID="m645";     fi
+  if [[ $GDO == "-mmcu=atmega6450" ]];  then DevID="m6450";    fi
+  if [[ $GDO == "-mmcu=atmega325p" ]];  then DevID="m325 -F";  fi
+  if [[ $GDO == "-mmcu=atmega3250p" ]]; then DevID="m3250 -F"; fi
+  if [[ $GDO == "-mmcu=atmega8515" ]];  then DevID="8515";     fi
+  if [[ $GDO == "-mmcu=atmega8535" ]];  then DevID="8535";     fi
+  if [[ $GDO == "-mmcu=atmega8" ]];     then DevID="m8";       fi
+  if [[ $GDO == "-mmcu=atmega16" ]];    then DevID="m16";      fi
+  if [[ $GDO == "-mmcu=atmega32" ]];    then DevID="m32";      fi
+  if [[ $GDO == "-mmcu=atmega64" ]];    then DevID="m64";      fi
+  if [[ $GDO == "-mmcu=atmega128" ]];   then DevID="m128";     fi
+  if [[ $GDO == "-mmcu=atmega48" ]];    then DevID="m48";      fi
+  if [[ $GDO == "-mmcu=atmega88" ]];    then DevID="m88";      fi
+  if [[ $GDO == "-mmcu=atmega168" ]];   then DevID="m168";     fi
+  if [[ $GDO == "-mmcu=atmega48p" ]];   then DevID="m48 -F";   fi
+  if [[ $GDO == "-mmcu=atmega88p" ]];   then DevID="m88 -F";   fi
+  if [[ $GDO == "-mmcu=atmega168p" ]];  then DevID="m168 -F";  fi
+  if [[ $GDO == "-mmcu=atmega328p" ]];  then DevID="m328p";    fi
+  if [[ $GDO == "-mmcu=atmega164p" ]];  then DevID="m164p";    fi
+  if [[ $GDO == "-mmcu=atmega324p" ]];  then DevID="m324p";    fi
+  if [[ $GDO == "-mmcu=atmega644p" ]];  then DevID="m644p";    fi
+  if [[ $GDO == "-mmcu=atmega1284p" ]]; then DevID="m1284p";   fi
+  if [[ $GDO == "-mmcu=atmega644" ]];   then DevID="m644";     fi
+  if [[ $GDO == "-mmcu=atmega640" ]];   then DevID="m640";     fi
+  if [[ $GDO == "-mmcu=atmega1280" ]];  then DevID="m1280";    fi
+  if [[ $GDO == "-mmcu=atmega1281" ]];  then DevID="m1281";    fi
+  if [[ $GDO == "-mmcu=atmega2560" ]];  then DevID="m2560";    fi
+  if [[ $GDO == "-mmcu=atmega2561" ]];  then DevID="m2561";    fi
+}
+
+# Test if we are in the correct directory
+if [[ "$WorkDir" != */IDE ]] && [[ "$WorkDir" != *\IDE ]]
+then
+  echo "Start me (from eclipse) in the IDE directory of the Femto OS distribution."
+  exit 0
+fi
+
+# check which device we have
+GCC_DEVICE=`cat $ScriptDir/gcc_device`
+translate_device $GCC_DEVICE
+if [[ $DevID == "" ]]
+then
+  echo "$GCC_DEVICE is not recognized as device parameter" 
+  exit 1
+fi
+
+echo "Flashing"
+echo "  device:   $DevID"
+echo "  board:    $Board"
+echo "  channel:  $Comport"
+echo "  file:     $HexFile"
+
+$ToolDir/avrdude -C $ConfDir/avrdude.conf -p $DevID -c $Board -P $Comport -U flash:w:$HexFile
+

@@ -1,0 +1,253 @@
+#!/bin/bash
+# run me from the IDE directory like this ./script/flash help
+#
+# Femto OS v 0.92 - Copyright (C) 2009  Ruud Vlaming
+#
+# This file is part of the Femto OS distribution.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Please note that, due to the GPLv3 license, for application of this
+# work and/or combined work in embedded systems special obligations apply.
+# If these are not to you liking, please know the Femto OS is dual
+# licensed. A commercial license and support are available.
+# See http://www.femtoos.org/ for details.
+
+
+WorkDir=$PWD
+ToolDir=$PWD/proc/bin/
+ConfOption="-C $PWD/proc/etc/avrdude.conf"
+ScriptDir=$PWD/script
+Project_File=$ScriptDir/default_project
+Device_File=$ScriptDir/default_device
+Comport_File=$ScriptDir/default_comport
+Board_File=$ScriptDir/default_board
+Options_File=$ScriptDir/default_options
+
+function maskerGate()
+{ local Value=$1
+  local Masker=$2
+  local pos=$3
+  if [[ ${Masker:$pos:1} == "x" ]]; then echo ${Value:$pos:1}; else echo ${Masker:$pos:1}; fi; }
+
+
+function maskerRun()
+{ local Value=$1
+  local Masker=$2
+  C2=`maskerGate $Value $Masker 2`
+  C3=`maskerGate $Value $Masker 3`
+  C4=`maskerGate $Value $Masker 4`
+  C5=`maskerGate $Value $Masker 5`
+  C6=`maskerGate $Value $Masker 6`
+  C7=`maskerGate $Value $Masker 7`
+  C8=`maskerGate $Value $Masker 8`
+  C9=`maskerGate $Value $Masker 9`
+  echo "0b$C2$C3$C4$C5$C6$C7$C8$C9"; }
+
+
+function filterAnd()
+{ for arg1 in $1; do
+    for arg2 in $2; do
+      let lastpos=${#arg2}-1
+      if [[ ${arg2:$lastpos:1} == "@" ]]
+      then
+        if [[ ${arg1:0:$lastpos} == ${arg2:0:$lastpos} ]]; then echo $arg1; return 0; fi
+      else 
+        if [[ $arg1 == $arg2 ]];  then echo $arg1; return 0; fi
+      fi
+    done
+  done; }
+
+function filterXor()
+{ for arg1 in $1; do
+    PRESENT=false;
+    for arg2 in $2; do
+      if [[ $arg1 == $arg2 ]]; then PRESENT=true; fi
+    done
+    if [[ $PRESENT == false ]]; then echo $arg1; return 0; fi
+  done; }
+
+function selectPar()
+{ local ParName=$1
+  local ParVar=$2
+  local ParFile=$3
+  local ParStrings=$4
+  local ParFac=$5
+  local ParComlen
+  local Result
+  Result=`filterAnd "$ParVar" "$ParStrings"`
+  if [[ $Result == "" ]] && [ -e  $ParFile ];
+  then
+    Result=`cat $ParFile`;
+    Result=`filterAnd "$Result" "$ParStrings"`
+  fi
+  if [[ $Result == "" ]] && [[ $ParFac == "check" ]] 
+  then
+    echo "$1 parameter is missing: try ./script/flash help" >&2
+    return 1
+  fi
+  echo $Result; }
+
+
+HelpStrings="help -help --help ? -? Help HELP -HELP --HELP"
+ProjectStrings="
+   Bare         Minimal        FlashLeds     Watchdog      Rendezvous    Queus         Sleep
+   Hooks        Interrupt      Shell         Passon        Remember      HelloWorld"
+DeviceStrings="
+   attiny2313    attiny24      attiny25      attiny261     attiny43u     attiny44      attiny45
+   attiny461     attiny48      attiny84      attiny85      attiny861     attiny88      atmega128
+   atmega1280    atmega1281    atmega1284p   atmega16      atmega162     atmega164p    atmega168
+   atmega2560    atmega168p    atmega2561    atmega32      atmega324p    atmega325p    atmega3250p
+   atmega328p    atmega325     atmega3250    atmega48      atmega48p     atmega64      atmega640
+   atmega644     atmega644p    atmega645     atmega6450    atmega8       atmega8515    atmega8535
+   atmega88      atmega88p"
+BoardStrings="
+   89isp         abcmini       alf           arduino       atisp         avr109        avr910
+   avr911        avrisp        avrisp2       avrispmkII    avrispv2      bascom        blaster
+   bsd           butterfly     c2n232i       dapa          dasa          dasa3         dragon_dw
+   dragon_hvsp   dragon_isp    dragon_jtag   dragon_pp     dt006         ere-isp-avr   frank-stk200
+   futurlec      jtag1         jtag1slow     jtag2         jtag2dw       jtag2fast     jtag2isp
+   jtag2slow     jtagmkI       jtagmkII      mib510        pavr          picoweb       pony-stk200
+   ponyser       siprog        sp12          stk200        stk500        stk500hvsp    stk500pp
+   stk500v1      stk500v2      stk600        stk600hvsp    stk600pp      usbasp        usbtiny
+   xil"
+ComportStrings="/dev@ lpt com usb LPT COM USB"
+
+#Start of main processing.
+
+# Test if we are in the correct directory
+if [[ "$WorkDir" != */IDE ]] && [[ "$WorkDir" != *\IDE ]]
+then 
+  echo "Start me in the IDE directory of the Femto OS distribution, with ./script/flash "
+  exit 0
+fi
+
+# See if help is requested
+Help=`filterAnd "$*" "$HelpStrings"`
+if [[ $Help != "" ]]
+then
+  echo "Usage: ./script/flash [8MHz|<Project>]  [<Device>] [<Comport>] [<Board>] [system]"
+  echo "Use the 8MHz to set the device to the internal clock and 8MHz on startup."
+  echo "<Project> = one of the following projects: $ProjectStrings"
+  echo "<Device> =  one of the following devices: $DeviceStrings"
+  echo "<Board> = one of the following boards: $BoardStrings"
+  echo "<Comport> = any valid port recognized by avrdude (com, lpt, usb, /dev/*)"
+  echo ""
+  echo "Option 'system' call the avr tools on your system rather then the"
+  echo "  ones build by the toolchain. Of course, they must be installed."
+  echo ""
+  echo "If a parameter is not specified, the last (succesfull) value is used."
+  echo "Options are not stored."
+  exit 0
+fi
+
+# Extract the command parameters, and get them form file if they were not specified
+set -e
+Project=`selectPar "Project" "$*" "$Project_File" "$ProjectStrings 8MHz" "check"`
+Device=`selectPar "Device" "$*" "$Device_File" "$DeviceStrings" "check"`
+Board=`selectPar "Board" "$*" "$Board_File" "$BoardStrings" "check"`
+Comport=`selectPar "Comport" "$*" "$Comport_File" "$ComportStrings" "check"`
+System=`selectPar "System" "$*" "$Options_File" "system" "nocheck"`
+set +e
+
+# Test if there were any parameters no recognized
+Unknown=`filterXor "$*" "$Help $Project $Device $Board $Comport $System"`
+if [[ $Unknown != "" ]]
+then
+  echo "Unknown parameter: $Unknown, try ./script/flash help"
+  exit 1
+fi
+
+if [[ $System == "system" ]]; then ToolDir=""; ConfOption=""; fi;
+
+# Determine the ID for avrdude
+if [[ $Device == "attiny2313" ]];  then DevID="t2313";      FuseMask="0b1xxx0100";  fi
+if [[ $Device == "attiny43u" ]];   then DevID="t44 -F";     FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny48" ]];    then DevID="t88 -F";     FuseMask="0b1xxxxx10";  fi
+if [[ $Device == "attiny88" ]];    then DevID="t88";        FuseMask="0b1xxxxx10";  fi
+if [[ $Device == "attiny24" ]];    then DevID="t24";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny44" ]];    then DevID="t44";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny84" ]];    then DevID="t84";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny25" ]];    then DevID="t25";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny45" ]];    then DevID="t45";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny85" ]];    then DevID="t85";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny261" ]];   then DevID="t261";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny461" ]];   then DevID="t461";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "attiny861" ]];   then DevID="t861";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega162" ]];   then DevID="m162";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega325" ]];   then DevID="m325";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega3250" ]];  then DevID="m3250";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega645" ]];   then DevID="m645";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega6450" ]];  then DevID="m6450";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega325p" ]];  then DevID="m325 -F";    FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega3250p" ]]; then DevID="m3250 -F";   FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega8515" ]];  then DevID="8515";       FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega8535" ]];  then DevID="8535";       FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega8" ]];     then DevID="m8";         FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega16" ]];    then DevID="m16";        FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega32" ]];    then DevID="m32";        FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega64" ]];    then DevID="m64";        FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega128" ]];   then DevID="m128";       FuseMask="0bxxxx0100";  fi
+if [[ $Device == "atmega48" ]];    then DevID="m48";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega88" ]];    then DevID="m88";        FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega168" ]];   then DevID="m168";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega48p" ]];   then DevID="m48 -F";     FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega88p" ]];   then DevID="m88 -F";     FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega168p" ]];  then DevID="m168 -F";    FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega328p" ]];  then DevID="m328p";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega164p" ]];  then DevID="m164p";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega324p" ]];  then DevID="m324p";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega644p" ]];  then DevID="m644p";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega1284p" ]]; then DevID="m1284p";     FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega644" ]];   then DevID="m644";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega640" ]];   then DevID="m640";       FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega1280" ]];  then DevID="m1280";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega1281" ]];  then DevID="m1281";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega2560" ]];  then DevID="m2560";      FuseMask="0b1xxx0010";  fi
+if [[ $Device == "atmega2561" ]];  then DevID="m2561";      FuseMask="0b1xxx0010";  fi
+
+
+# See if we must program 8MHz
+if [[ $Project == "8MHz" ]]
+then
+  # Read the lfuse
+  $ToolDir""avrdude -qq $ConfOption -p $DevID -c $Board -P $Comport -U lfuse:r:temp_lfuse:b
+  if ! [ $? -eq 0 ]; then exit 1; fi
+  Lfuse=`cat temp_lfuse`
+  rm temp_lfuse
+  NewFuse=`maskerRun $Lfuse $FuseMask`
+  # Write new bits in fuse if needed
+  if [[ $Lfuse != $NewFuse ]]; then $ToolDir""avrdude -qq $ConfOption -p $DevID -c $Board -P $Comport -u -U lfuse:w:$NewFuse:m; fi
+else
+  # Determine Exe file and see if it exists
+  Exe_File=../MainCode/binaries/$Device/main_$Project.bin
+  if ! [ -e  $Exe_File ]
+  then
+    echo "Executable does not exist, try compiling first"
+    echo "./script/compile $Project $Device"
+    exit 0
+  fi
+  # Flash it
+  $ToolDir""avrdude -qq $ConfOption -p $DevID -c $Board -P $Comport  -U flash:w:$Exe_File
+fi
+
+# Save the parameters for the next time, if we were succesfull
+if [ $? -eq 0 ]
+then
+  echo $Project > $Project_File
+  echo $Device > $Device_File
+  echo $Board > $Board_File
+  echo $Comport > $Comport_File
+fi
+
+

@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# Femto OS v 0.92 - Copyright (C) 2008  Ruud Vlaming
+#
+# This file is part of the Femto OS distribution.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Please note that, due to the GPLv3 license, for application of this
+# work and/or combined work in embedded systems special obligations apply.
+# If these are not to you liking, please know the Femto OS is dual
+# licensed. A commercial license and support are available.
+# See http://www.femtoos.org/ for details.
+#
+# AVR specific, only works on pure assembly (i.e. compile with comments left out)
+# This utility tests if a particular register (X,Y,Z) is used without being set/used
+# somewhere in that function. Please note that the flow is not analysed, thus, code may
+# be erroneous without being detected. However, since those registers are usually no
+# result parameters (r24, r25 are used for that) it is a strong indication something
+# is wrong. Manual inspection of the code remains needed at all times.
+
+awk ' \
+{ for (i=1; i<=NF; i++) { if (match($i,"<[a-z,A-Z,0-9,_]+>:"))   { fN=fN+1; lMn=$i; } }       \
+  for (i=1; i<=NF; i++) { if (match($i,"r26")|| match($i,"r27")) { fRx=1; } }    \
+  for (i=1; i<=NF; i++) { if (match($i,"r28")|| match($i,"r29")) { fRy=1; } }    \
+  for (i=1; i<=NF; i++) { if (match($i,"r30")|| match($i,"r31")) { fRz=1; } }    \
+  for (i=1; i<=NF; i++) { if (match($i,"X\\+"))                  { fX=1; } }     \
+  for (i=1; i<=NF; i++) { if (match($i,"Y\\+"))                  { fY=1; } }     \
+  for (i=1; i<=NF; i++) { if (match($i,"Z\\+"))                  { fZ=1; } }     \
+  if (fN==2)
+  { if ((fRx==0) && (fX==1)) { printf("== ERROR: Frame pointer (on X-reg) without setup found in %s\n",lM); } \
+    if ((fRy==0) && (fY==1)) { printf("== ERROR: Frame pointer (on Y-reg) without setup found in %s\n",lM); } \
+    if ((fRz==0) && (fZ==1)) { printf("== ERROR: Frame pointer (on Z-reg) without setup found in %s\n",lM); } \
+    fRx=0; fX=0; fRy=0; fY=0; fRz=0; fZ=0; }      \
+  lM=lMn; fN=1; \
+  } ' $1
+

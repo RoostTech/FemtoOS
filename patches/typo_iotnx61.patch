@@ -1,0 +1,11 @@
+--- include/avr/iotnx61.h.orig    2007-12-12 15:00:49.000000000 +0100
++++ include/avr/iotnx61.h         2008-10-20 23:13:00.000000000 +0200
+@@ -370,7 +370,7 @@
+ #define CS01    1
+ #define CS02    2
+ #define PSR0    3
+-#define TMS     4
++#define TSM     4
+
+ #define MCUSR   _SFR_IO8(0x34)
+ #define PORF    0

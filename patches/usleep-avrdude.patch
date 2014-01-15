@@ -1,0 +1,41 @@
+Index: avrdude.h
+===================================================================
+RCS file: /home/cvs/avrdude/avrdude/avrdude.h,v
+retrieving revision 1.2
+diff -u -u -r1.2 avrdude.h
+--- avrdude.h   24 Jan 2007 22:43:46 -0000      1.2
++++ avrdude.h   19 Nov 2008 21:43:43 -0000
+@@ -46,7 +46,7 @@
+  #define ANTIWARP 3
+  #define usleep(us) Sleep(us/1000*ANTIWARP)
+ */
+-void usleep(unsigned long us);
++int usleep(unsigned int us);
+ 
+ #if !defined(HAVE_GETTIMEOFDAY)
+ struct timezone;
+Index: ppiwin.c
+===================================================================
+RCS file: /home/cvs/avrdude/avrdude/ppiwin.c,v
+retrieving revision 1.13
+diff -u -u -r1.13 ppiwin.c
+--- ppiwin.c    5 Nov 2008 20:53:51 -0000       1.13
++++ ppiwin.c    19 Nov 2008 21:44:15 -0000
+@@ -374,7 +374,7 @@
+ 
+ #endif
+ 
+-void usleep(unsigned long us)
++int usleep(unsigned int us)
+ {
+        int has_highperf;
+        LARGE_INTEGER freq,start,stop,loopend;
+@@ -407,6 +407,8 @@
+        }
+        
+     DEBUG_DisplayTimingInfo(start, stop, freq, us, has_highperf);
++
++    return 0;
+ }
+ 
+ #endif

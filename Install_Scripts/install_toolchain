@@ -1,0 +1,697 @@
+#!/bin/bash
+
+# 25-01-09
+# Added some patches by Carsten Foss <tp@luna.dyndns.dk>,
+# more info see http://www.avrfreaks.net/index.php?module=PNphpBB2&file=viewtopic&t=72619
+
+# this script was last verified on 28-01-98
+# please do execute in 'root' (i.e. FemtoOS_version) directory, not in the Install_Scripts directory.
+
+# Note, you may adapt this script and change the versions to the latest
+# versions, but the patches may not be adequate for the newer versions.
+# Please check!
+
+# you can launch this tool with (Linux/Mac/Cygwin)
+# Install_scripts/install_toolchain
+# to clean everything (except downloads and succesful installed files)
+# Install_scripts/install_toolchain --clean
+
+EXEDIR=$PWD
+LOGDIR=$EXEDIR/log
+mkdir -p $LOGDIR
+NowStr=`date +%y%m%d_%H%M%S`
+LogFile=$LOGDIR/install_$NowStr.log
+
+
+let FAIL_RES=1
+let SUCCES_RES=0
+let SKIPPED_RES=-1025
+let COMPLETE_RES=-1023
+let WARNING_RES=-1022
+
+let TOOLS_RES=$SKIPPED_RES;
+let DOWNLOAD_RES=$SKIPPED_RES;
+let PATCH_RES=$SKIPPED_RES;
+let UTILS_RES=$SKIPPED_RES;
+let GMP_RES=$SKIPPED_RES;
+let MPFR_RES=$SKIPPED_RES;
+let GCC_RES=$SKIPPED_RES;
+let LIBC_RES=$SKIPPED_RES;
+let DUDE_RES=$SKIPPED_RES;
+
+
+function double_echo()
+{
+echo "$1"
+echo $1 >> $LogFile
+}
+
+
+function displaymeter()
+{ case "$1" in
+  [1] ) echo -en "  Progress  <  =  >  $2% \r\c";;
+  [2] ) echo -en "  Progress  <   = >  $2% \r\c";;
+  [3] ) echo -en "  Progress  <    =>  $2% \r\c";;
+  [4] ) echo -en "  Progress  <   = >  $2% \r\c";;
+  [5] ) echo -en "  Progress  <  =  >  $2% \r\c";;
+  [6] ) echo -en "  Progress  < =   >  $2% \r\c";;
+  [7] ) echo -en "  Progress  <=    >  $2% \r\c";;
+  [8] ) echo -en "  Progress  < =   >  $2% \r\c";;
+  [9] ) echo -en "  Progress  <  ?  >  $2% \r\c";;
+esac
+}
+
+# cannot use stat bc mac and linux have different implementations
+# do not use cut to get the first field, since the numbers may start with spaces.
+function getfilesize()
+{
+#ls -sk  $LogFile | awk '{print $1}'
+ls -l  $LogFile | awk '{print $5}'
+}
+
+
+function progress()
+{
+# on cygwin some feaures are implemented differently. For example you cannot use
+# while ps -p $$ >/dev/null on cygwin
+# bc ps always exits with 0, and you cannot use 
+# while PrNr=$(ps -p $$ | sed -n -e "s/^[ ]*\($$\).*$/\1/p"); [ -n "$PrNr" ]
+# bc pid are directly recylced so that the ps process can get the pid of the
+# deceased parent Thus we choose for a simple string comparisson. However, due
+# to the different formats of ps, we may only compare first (PID) and last (CMD) words.
+AWKstr="{if (\$1==$$) {print \$1 \$NF}}"
+PARENTID=`ps -p $$ | awk "$AWKstr"`
+# the parent must still be running.
+if [ -n "$PARENTID" ]
+then
+  TESTID=$PARENTID
+  echo -en "\r\c"
+  local Count=0
+  local LastSize=0;
+  local FileSize=0;
+  local FileOffset=0;
+  local FileTotal=6000000
+  while [ "$TESTID" == "$PARENTID" ]
+  do
+    FileSize=`getfilesize`
+    if [ $Count -lt 9 ]; then let Count=$Count+1; fi;
+    if [ $Count -eq 9 ] && [ $LastSize -lt $FileSize ]
+    then
+      let Count=1
+      LastSize=$FileSize
+    fi
+    FileProgress=`expr '(' '100' '*' '(' "$FileSize" '+' "$FileOffset" ')' ')' '/' "$FileTotal"`
+    displaymeter $Count $FileProgress
+    sleep 1
+    if [[ $PROGRESSREPORT == "slow" ]]; then sleep 9; fi;
+    TESTID=`ps -p $$ | awk "$AWKstr"`;
+  done
+fi
+}
+
+function print_gpl()
+{
+echo " "
+echo " Toolchain installer for Femto OS v 0.92 - Copyright (C) 2008 - 2009  Ruud Vlaming "
+echo " "
+echo " This file is part of the Femto OS distribution. "
+echo " "
+echo " This program is free software: you can redistribute it and/or modify "
+echo " it under the terms of the GNU General Public License as published by "
+echo " the Free Software Foundation, version 3 of the License. "
+echo " "
+echo " This program is distributed in the hope that it will be useful, "
+echo " but WITHOUT ANY WARRANTY; without even the implied warranty of "
+echo " MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the "
+echo " GNU General Public License for more details. "
+echo " "
+echo " You should have received a copy of the GNU General Public License "
+echo " along with this program.  If not, see <http://www.gnu.org/licenses/>. "
+echo " "
+echo " Please note that, due to the GPLv3 license, for application of this "
+echo " work and/or combined work in embedded systems special obligations apply. "
+echo " If these are not to you liking, please know the Femto OS is dual "
+echo " licensed. A commercial license and support are available. "
+echo " See http://www.femtoos.org/ for details. "
+echo " "
+}
+
+function print()
+{
+if   [ $1 -eq $SUCCES_RES ];   then  double_echo "- $2 succes";
+elif [ $1 -eq $COMPLETE_RES ]; then  double_echo "- $2 complete";
+elif [ $1 -eq $SKIPPED_RES ];  then  double_echo "- $2 skipped";
+elif [ $1 -eq $WARNING_RES ];  then  double_echo "- $2 warning";
+else
+  TOT_RES=$FAIL_RES
+  double_echo "- $2 failure"
+fi
+}
+
+function report()
+{
+  TOT_RES=$SUCCES_RES
+  double_echo ""
+  double_echo "===> Results of this script:"
+  print $TOOLS_RES    "tools:     "
+  print $DOWNLOAD_RES "download:  "
+  print $PATCH_RES    "patches:   "
+  print $UTILS_RES    "bin-utils: "
+  print $GCC_RES      "gcc:       "
+  print $LIBC_RES     "avr-libc:  "
+  print $DUDE_RES     "avr-dude:  "
+  cd $EXEDIR
+  if [ $TOT_RES -eq $FAIL_RES ]
+  then
+    double_echo "See $LogFile for more details."
+    exit $FAIL_RES
+  else
+    exit $SUCCES_RES
+  fi
+}
+
+
+function testtool()
+{
+command -v $1 2>&1 > /dev/null
+if [ $? -ne $SUCCES_RES ];
+then
+  double_echo "  ERROR: $1 not present, script cannot continue.";
+  let TOOLS_RES=$FAIL_RES;
+else
+  if [[ $2 == "0" ]]
+  then double_echo "  OK: $1 version info not required."
+  else
+    local VERSION=`$1 $3  2>/dev/null| head -n 3 | sed -e 's/([^(]*)//g' -e 's/$/ /' -e 's/^/ /' | sed -n -e 's/^.*[ v]\([0-9]\.[0-9][0-9\.]*\).*$/\1/p'`
+    # do not use \+ in regexp, mac's sed implementation does not support it.w
+    local VERSIONFORMAT=`echo $VERSION |  sed -n -e 's/\([0-9][0-9]*\)\.[0-9].*/\1/p'`
+    if [[ $VERSIONFORMAT == "" ]]
+    then
+      double_echo "  WARNING: $1 version could not be detected. (Needed: >= $2)"
+      if [ $TOOLS_RES -ne $FAIL_RES ]; then let TOOLS_RES=$WARNING_RES; fi;
+    else
+      local Vx1=`paste -d"\0"  <(echo 000) <(echo $VERSION | cut -s -d. -f1 | cut -c1-3) | sed -n -e 's!.*\([0-9][0-9][0-9]\)!\1!p'`
+      local Vx2=`paste -d"\0"  <(echo 000) <(echo $VERSION | cut -s -d. -f2 | cut -c1-3) | sed -n -e 's!.*\([0-9][0-9][0-9]\)!\1!p'`
+      local Vx3=`paste -d"\0"  <(echo 000) <(echo $VERSION | cut -s -d. -f3 | cut -c1-3) | sed -n -e 's!.*\([0-9][0-9][0-9]\)!\1!p'`
+      local Vy1=`paste -d"\0"  <(echo 000) <(echo $2 | cut -s -d. -f1 | cut -c1-3) | sed -n -e 's!.*\([0-9][0-9][0-9]\)!\1!p'`
+      local Vy2=`paste -d"\0"  <(echo 000) <(echo $2 | cut -s -d. -f2 | cut -c1-3) | sed -n -e 's!.*\([0-9][0-9][0-9]\)!\1!p'`
+      local Vy3=`paste -d"\0"  <(echo 000) <(echo $2 | cut -s -d. -f3 | cut -c1-3) | sed -n -e 's!.*\([0-9][0-9][0-9]\)!\1!p'`
+      local VxTot=`paste -d"\0" <(echo $Vx1) <(echo $Vx2) <(echo $Vx3)`
+      local VyTot=`paste -d"\0" <(echo $Vy1) <(echo $Vy2) <(echo $Vy3)`
+      if [ $VxTot \< $VyTot ]
+      then
+        double_echo "  WARNING: $1 version: $VERSION, tool may be too old. (Needed: >= $2)"
+        if [ $TOOLS_RES -ne $FAIL_RES ]; then let TOOLS_RES=$WARNING_RES; fi;
+      else
+        double_echo "  OK: $1 version: $VERSION"
+      fi
+    fi
+  fi
+fi
+}
+
+function testmd5()
+{ if [ -e $1 ]
+  then
+    MD5SUM=`openssl dgst -md5 $1 | awk '{print $2}' `
+    if [[ $2 == $MD5SUM ]]; then double_echo "  OK: $1"; else double_echo "  WARNING: $1 incorrect md5"; let DOWNLOAD_RES=$WARNING_RES; fi
+  else double_echo "  ERROR $1 absent"; let DOWNLOAD_RES=$FAIL_RES;
+  fi
+}
+
+UTILS_VERSIE=2.19.1   #was 2.19   latest 2.19.1
+GCC_VERSIE=4.3.3      #was 4.3.3  latest 4.3.4 (4.4.1)
+GMP_VERSIE=4.3.1      #was 4.2.4  latest 4.3.1
+MPFR_VERSIE=2.4.1     #was 2.4.0  latest 2.4.1
+LIBC_VERSIE=1.6.7     #was 1.6.4  latest 1.6.7
+DUDE_VERSIE=5.8       #was 5.5    latest 5.8
+
+# Note that sometimes versions don't work togheter, as in this case.
+# To that end we run patches, but they are very version dependend.
+# So if you change the version, deactivate the patches or better
+# update them. Not having recent patched blockes decent upgrading.
+
+# create working directories
+DOWNLOAD_DIR=$EXEDIR/download
+PATCH_LOCATION=http://winavr.cvs.sourceforge.net/viewvc/*checkout*/winavr/patches
+
+BINUTILS_DIR=$DOWNLOAD_DIR/binutils-$UTILS_VERSIE
+GMP_DIR=$DOWNLOAD_DIR/gmp-$GMP_VERSIE
+MPFR_DIR=$DOWNLOAD_DIR/mpfr-$MPFR_VERSIE
+GCC_DIR=$DOWNLOAD_DIR/gcc-$GCC_VERSIE
+LIBC_DIR=$DOWNLOAD_DIR/avr-libc-$LIBC_VERSIE
+DUDE_DIR=$DOWNLOAD_DIR/avrdude-$DUDE_VERSIE
+
+BINUTILS_FILE=binutils-$UTILS_VERSIE.tar.bz2
+GMP_FILE=gmp-$GMP_VERSIE.tar.bz2
+MPFR_FILE=mpfr-$MPFR_VERSIE.tar.bz2
+GCC_FILE=gcc-$GCC_VERSIE.tar.bz2
+LIBC_FILE=avr-libc-$LIBC_VERSIE.tar.bz2
+DUDE_FILE=avrdude-$DUDE_VERSIE.tar.gz
+
+# MD5DUMS are version dependant
+BINUTILS_MD5="09a8c5821a2dfdbb20665bc0bd680791"
+GMP_MD5="26cec15a90885042dd4a15c4003b08ae"
+MPFR_MD5="c5ee0a8ce82ad55fe29ac57edd35d09e"
+GCC_MD5="cc3c5565fdb9ab87a05ddb106ba0bd1f"
+LIBC_MD5="1ccf8078e583d527392f079082f816b0"
+DUDE_MD5="d459dcf47fa7fc2a29a70d68ebff4886"
+
+
+# Patches are version dependant
+PATCH_LOCAL_DIR=$EXEDIR/patches
+PATCH_BINUTILS_DIR=$DOWNLOAD_DIR/binutils-2.19-patches
+PATCH_GCC_DIR=$DOWNLOAD_DIR/gcc-4.3.2-patches
+PATCH_LIBC_DIR=$DOWNLOAD_DIR/avr-libc-1.6.4-patches
+PATCH_DUDE_DIR=$DOWNLOAD_DIR/avrdude-5.5-patches
+
+print_gpl
+
+if  ! [ -d Install_Scripts ] || [[ $1 == "help" ]] || [[ $1 == "-help" ]]    || [[ $1 == "--help" ]]   || [[ $1 == "?" ]]    || [[ $1 == "-?" ]]
+then
+  echo -e "\033[31m"
+  echo "Start me in the FemtoOS_[version] directory of the Femto OS distribution."
+  echo "Usage:  ./Install_Scripts/install_toolchain "
+  echo "Without options, just start the default way. The options are:"
+  echo "  --test          : first test if the tools needed by this script are present."
+  echo "  --download      : only test & download, do not start compilation."
+  echo "  --clean         : remove all created files except downloads and succesfully installed files."
+  echo "  --slow          : slow down the progress report on slow machines or on cygwin"
+  echo "  --install [dir] : supply an alternative location for the installation (full path!)."
+  echo "  --help          : print this text."
+  echo ""
+  echo "NOTE: options cannot be combined, just supply one option, or none."
+  echo "You may restart the script after a failure, it will try to avoid to redo work"
+  echo "that was already succesfully completed. If unsuccesfull, clean first."
+  echo ""
+  echo "If a download did not work out, you can download it manually and put it into"
+  echo "the 'download' directory. Clean afterwards, then restart the script. "
+  echo ""
+  echo "If you are not using this install script for Femto OS, you can supply an alternative"
+  echo "installation directory. Be sure to supply a full and valid path."
+  echo ""
+  echo "When started the progress is indicated by a progress meter with an estimate (!!)"
+  echo "of the total amount of work done. Determination of the progress is intensive on cygwin, "
+  echo "use --slow to reduce the load."
+  echo ""
+  echo "In case of an error see the last file in the log directory where all log files are kept."
+  echo ""
+  echo -e "\033[00m"
+  report
+fi
+
+TARGET=""
+QUIET=""
+PROGRESSREPORT="";
+PREFIX=$EXEDIR/IDE/proc;
+
+if [[ $1 == "--test" ]];       then TARGET="test";
+elif [[ $1 == "--download" ]]; then TARGET="download"; 
+elif [[ $1 == "--clean" ]];    then TARGET="clean";
+elif [[ $1 == "--slow" ]];     then PROGRESSREPORT="slow";
+elif [[ $1 == "--install" ]];  then if [[ $2 != "" ]]; then PREFIX=$2; fi;
+elif [[ $1 != "" ]]; then echo -e "\033[31mUnrecognized option, type --help\033[00m"; report;
+fi
+if [[ $1 != "--install" ]] && [[ $2 != "" ]]; then echo -e "\033[31mNo more than one option allowed, type --help\033[00m"; report; fi
+
+double_echo "===> making paths / cleaning"
+PATH=$PREFIX/bin:$PATH
+# two lines below special for Ubuntu 
+LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
+LD_RUN_PATH=$PREFIX/lib:$LD_RUN_PATH
+export PREFIX
+export PATH
+export LD_LIBRARY_PATH
+export LD_RUN_PATH
+mkdir -p $DOWNLOAD_DIR
+mkdir -p $PATCH_BINUTILS_DIR
+mkdir -p $PATCH_GCC_DIR
+mkdir -p $PATCH_LIBC_DIR
+mkdir -p $PATCH_DUDE_DIR
+
+if [[ $TARGET == "clean" ]]
+then
+  if [ -d $BINUTILS_DIR ];       then rm -rf $BINUTILS_DIR/*;       rmdir $BINUTILS_DIR;         fi
+  if [ -d $GMP_DIR ];            then rm -rf $GMP_DIR/*             rmdir $GMP_DIR;              fi
+  if [ -d $MPFR_DIR ];           then rm -rf $MPFR_DIR/*            rmdir $MPFR_DIR;             fi
+  if [ -d $GCC_DIR ];            then rm -rf $GCC_DIR/*;            rmdir $GCC_DIR;              fi
+  if [ -d $LIBC_DIR ];           then rm -rf $LIBC_DIR/*            rmdir $LIBC_DIR;             fi
+  if [ -d $DUDE_DIR ];           then rm -rf $DUDE_DIR/*            rmdir $DUDE_DIR;             fi
+  if [ -d $BINUTILS_DIR-build ]; then rm -rf $BINUTILS_DIR-build/*; rmdir $BINUTILS_DIR-build;   fi
+  if [ -d $GCC_DIR-build ];      then rm -rf $GCC_DIR-build/*;      rmdir $GCC_DIR-build;        fi
+  if [ -d $LIBC_DIR-build ];     then rm -rf $LIBC_DIR-build/*      rmdir $LIBC_DIR-build;       fi
+  if [ -d $DUDE_DIR-build ];     then rm -rf $DUDE_DIR-build/*      rmdir $DUDE_DIR-build;       fi
+  rm -rf $DOWNLOAD_DIR/download-succes.res
+  echo "===> Clean done (installed, downloaded and log files were not removed!)."
+  exit $SUCCES_RES
+fi
+
+print_gpl > $LogFile
+
+double_echo "===> testing tools"
+let TOOLS_RES=$SUCCES_RES;
+testtool aclocal     1.10     --version
+testtool ar          2.16.1   --version
+testtool autoconf    2.61     --version
+testtool autoheader  2.61     --version
+testtool automake    1.10.1   --version
+testtool bison       2.1      --version
+testtool flex        2.5.33   --version
+testtool gawk        3.1.5    --version
+testtool gcc         3.4.4    --version
+testtool g++         3.4.4    --version
+testtool install     5.94     --version
+testtool libtool     1.5.22   --version
+testtool make        3.80     --version
+testtool makeinfo    4.8      --version
+testtool openssl     0.9      version
+testtool patch       2.5.8    --version
+testtool perl        5.8.8    --version
+testtool touch       5.94     --version
+testtool wget        1.10.2   --version
+
+if [[ $TARGET == "test" ]]; then double_echo "===> Test done."; report; fi
+
+if [ $TOOLS_RES -eq $FAIL_RES ]; then report; exit $FAIL_RES; fi
+
+# start the progress meter.
+progress 2>/dev/null &
+
+if [ -e $DOWNLOAD_DIR/download-succes.res ]
+then
+  double_echo "===> skipping download base packages"
+  let DOWNLOAD_RES=$COMPLETE_RES
+else
+  double_echo "===> download base packages"
+  let DOWNLOAD_RES=$SUCCES_RES;
+  
+  cd $DOWNLOAD_DIR
+  double_echo "  DO: download $BINUTILS_FILE"
+  wget -nc http://ftp.gnu.org/gnu/binutils/$BINUTILS_FILE >>$LogFile 2>&1;                                let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  double_echo "  DO: download $GMP_FILE"
+  wget -nc http://ftp.sunet.se/pub/gnu/gmp/$GMP_FILE >>$LogFile 2>&1;                                     let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  double_echo "  DO: download $MPFR_FILE"
+  wget -nc http://mpfr.org/mpfr-$MPFR_VERSIE/$MPFR_FILE >>$LogFile 2>&1;                                  let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  double_echo "  DO: download $GCC_FILE"
+  wget -nc ftp://ftp.nluug.nl/mirror/languages/gcc/releases/gcc-$GCC_VERSIE/$GCC_FILE >>$LogFile 2>&1;    let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  double_echo "  DO: download $LIBC_FILE"
+  wget -nc http://download.savannah.gnu.org/releases/avr-libc/$LIBC_FILE >>$LogFile 2>&1;                 let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  double_echo "  DO: download $DUDE_FILE"
+  wget -nc http://download.savannah.gnu.org/releases/avrdude/$DUDE_FILE >>$LogFile 2>&1;                  let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  
+  # Patches by Joerg Wunsch et al. are included in this file, and modified so the run on binutils
+  # for more information check out:
+  #  http://www.freshports.org/devel/avr-binutils/
+  #  http://www.freshports.org/devel/avr-gcc/
+  #  http://winavr.cvs.sourceforge.net/viewvc/winavr/patches/
+  #original sources can be obtained using (note these may not work since they where not modified)
+
+  cd $PATCH_BINUTILS_DIR
+  wget -nc $PATCH_LOCATION/binutils/2.19/30-binutils-2.19-avr-size.patch >>$LogFile 2>&1;                               let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/31-binutils-2.19-avr-coff.patch >>$LogFile 2>&1;                               let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/32-binutils-2.19-new-sections.patch >>$LogFile 2>&1;                           let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/33-binutils-2.19-data-origin.patch >>$LogFile 2>&1;                            let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/40-binutils-2.19-wrong-arch.patch >>$LogFile 2>&1;                             let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/50-binutils-2.19-xmega.patch >>$LogFile 2>&1;                                  let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/51-binutils-2.19-xmega2.patch >>$LogFile 2>&1;                                 let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/binutils/2.19/52-binutils-2.19-atmega32u6.patch >>$LogFile 2>&1;                             let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+
+  cd $PATCH_GCC_DIR
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/20-gcc-4.3.2-libiberty-Makefile.in.patch >>$LogFile 2>&1;                          let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/21-gcc-4.3.2-disable-libssp.patch >>$LogFile 2>&1;                                 let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/23-gcc-4.3.2-ada-Makefile.patch >>$LogFile 2>&1;                                   let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/40-gcc-4.3.2-bug-10768-by-adacore.patch >>$LogFile 2>&1;                           let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/41-gcc-4.3.2-bug-11259_v3.patch >>$LogFile 2>&1;                                   let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/42-gcc-4.3.2-bug-spill-v4.patch >>$LogFile 2>&1;                                   let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/43-gcc-4.3.2-bug-35013.patch >>$LogFile 2>&1;                                      let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/44-gcc-4.3.2-libgcc16.patch >>$LogFile 2>&1;                                       let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/45-gcc-4.3.2-bug-33009.patch >>$LogFile 2>&1;                                      let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/50-gcc-4.3.2-mega256.patch >>$LogFile 2>&1;                                        let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/51-gcc-4.3.2-mega256-additional.patch >>$LogFile 2>&1;                             let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/52-gcc-4.3.2-xmega-v9.patch >>$LogFile 2>&1;                                       let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/53-gcc-4.3.2-xmega2.patch >>$LogFile 2>&1;                                         let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/54-gcc-4.3.2-atmega32m1.patch >>$LogFile 2>&1;                                     let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/55-gcc-4.3.2-atmega32c1.patch >>$LogFile 2>&1;                                     let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/56-gcc-4.3.2-atmega32u4.patch >>$LogFile 2>&1;                                     let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/57-gcc-4.3.2-attiny167.patch >>$LogFile 2>&1;                                      let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/58-gcc-4.3.2-remove-atmega32hvb.patch >>$LogFile 2>&1;                             let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/59-gcc-4.3.2-attiny13a.patch >>$LogFile 2>&1;                                      let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/60-gcc-4.3.2-atmega32u6.patch >>$LogFile 2>&1;                                     let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/61-gcc-4.3.2-osmain.patch >>$LogFile 2>&1;                                         let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/70-gcc-4.3.2-ada-mlib.patch >>$LogFile 2>&1;                                       let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/71-gcc-4.3.2-ada-freestanding.patch >>$LogFile 2>&1;                               let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/72-gcc-4.3.2-ada-timebase.patch >>$LogFile 2>&1;                                   let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/73-gcc-4.3.2-ada-gnat1_print_path.patch >>$LogFile 2>&1;                           let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/74-gcc-4.3.2-ada-optim_static_addr.patch >>$LogFile 2>&1;                          let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/gcc/4.3.2/75-gcc-4.3.2-builtins_v6.patch >>$LogFile 2>&1;                                    let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  
+  cd $PATCH_LIBC_DIR
+  wget -nc $PATCH_LOCATION/avr-libc/1.6.4/30-avr-libc-1.6.4-dwarf2.patch >>$LogFile 2>&1;                               let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/avr-libc/1.6.4/31-avr-libc-1.6.4-builtins.patch >>$LogFile 2>&1;                             let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  wget -nc $PATCH_LOCATION/avr-libc/1.6.4/40-avr-libc-1.6.4-fix-attiny13a-arch.patch >>$LogFile 2>&1;                   let DOWNLOAD_RES=$DOWNLOAD_RES+$?
+  
+  cd $PATCH_DUDE_DIR
+  # All pataches are local for now
+fi
+
+if [ $DOWNLOAD_RES -eq $SUCCES_RES ]; then date > $DOWNLOAD_DIR/download-succes.res; fi
+if [ $DOWNLOAD_RES -ne $SUCCES_RES ] && [ $DOWNLOAD_RES -ne $COMPLETE_RES ]
+then
+  double_echo "Not all downloads could be completed. Just rerun the script (on a less busy time),"
+  double_echo "or download the missing file manually and put it in the download directory,"
+  double_echo "clean and restart."
+  report
+fi
+
+if [ -e $DOWNLOAD_DIR/download-succes.res ]
+then
+  cd $DOWNLOAD_DIR
+  double_echo "===> checking md5 of downloads"
+  testmd5 $BINUTILS_FILE $BINUTILS_MD5
+  testmd5 $GMP_FILE $GMP_MD5
+  testmd5 $MPFR_FILE $MPFR_MD5
+  testmd5 $GCC_FILE $GCC_MD5
+  testmd5 $LIBC_FILE $LIBC_MD5
+  testmd5 $DUDE_FILE $DUDE_MD5
+  if [ $DOWNLOAD_RES -eq $FAIL_RES ]; then rm $DOWNLOAD_DIR/download-succes.res; fi
+fi
+
+if [[ $TARGET == "download" ]]
+then
+  double_echo "===> download done "
+  report
+fi
+
+
+double_echo "===> remove failed patches"
+if [ -e $BINUTILS_DIR/patch-failure.res ]; then rm -rf $BINUTILS_DIR; rm -rf $BINUTILS_DIR-build;   fi
+if [ -e $GCC_DIR/patch-failure.res ];      then rm -rf $GCC_DIR;      rm -rf $GCC_DIR-build;        fi
+if [ -e $LIBC_DIR/patch-failure.res ];     then rm -rf $LIBC_DIR      rm -rf $LIBC_DIR-build;       fi
+if [ -e $DUDE_DIR/patch-failure.res ];     then rm -rf $DUDE_DIR      rm -rf $DUDE_DIR-build;       fi
+
+
+cd $DOWNLOAD_DIR
+double_echo "===> unpack everything    "
+if [ -d $BINUTILS_DIR ]; then double_echo "- allready unpacked binutils-$UTILS_VERSIE";  else tar -jxk --checkpoint -f $BINUTILS_FILE >>$LogFile 2>&1 ; fi
+if [ -d $GMP_DIR ];      then double_echo "- allready unpacked gmp-$GMP_VERSIE";         else tar -jxk --checkpoint -f $GMP_FILE >>$LogFile 2>&1 ;        fi
+if [ -d $MPFR_DIR ];     then double_echo "- allready unpacked mpfr-$MPFR_VERSIE";       else tar -jxk --checkpoint -f $MPFR_FILE >>$LogFile 2>&1 ;      fi
+if [ -d $GCC_DIR ];      then double_echo "- allready unpacked gcc-$GCC_VERSIE";         else tar -jxk --checkpoint -f $GCC_FILE >>$LogFile 2>&1 ;        fi
+if [ -d $LIBC_DIR ];     then double_echo "- allready unpacked avr-libc-$LIBC_VERSIE ";  else tar -jxk --checkpoint -f $LIBC_FILE >>$LogFile 2>&1 ;  fi
+if [ -d $DUDE_DIR ];     then double_echo "- allready unpacked avrdude-$DUDE_VERSIE";    else tar -zxk --checkpoint -f $DUDE_FILE >>$LogFile 2>&1 ;    fi
+rm -rf $GCC_DIR/gmp
+rm -rf $GCC_DIR/mpfr
+mkdir -p $GCC_DIR/gmp
+mkdir -p $GCC_DIR/mpfr
+cp -rfp $GMP_DIR/* $GCC_DIR/gmp
+cp -rfp $MPFR_DIR/* $GCC_DIR/mpfr
+
+
+double_echo "===> applying patches     "
+let PATCH_RES=$SUCCES_RES;
+let PATCH_BIN_RES=$SUCCES_RES;
+let PATCH_GCC_RES=$SUCCES_RES;
+let PATCH_LIBC_RES=$SUCCES_RES;
+let PATCH_DUDE_RES=$SUCCES_RES;
+
+if [ -e $BINUTILS_DIR/patch-succes.res ]
+then
+  double_echo "===> skipping binutils patches"
+  let PATCH_BIN_RES=$COMPLETE_RES
+else
+  cd $BINUTILS_DIR
+  double_echo "  DO: 30-binutils-2.19-avr-size.patch    ";              patch -N -p0 < $PATCH_BINUTILS_DIR/30-binutils-2.19-avr-size.patch >>$LogFile 2>&1 ;                    let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 31-binutils-2.19-avr-coff.patch    ";              patch -N -p0 < $PATCH_BINUTILS_DIR/31-binutils-2.19-avr-coff.patch >>$LogFile 2>&1;                     let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 32-binutils-2.19-new-sections.patch";              patch -N -p0 < $PATCH_BINUTILS_DIR/32-binutils-2.19-new-sections.patch >>$LogFile 2>&1;                 let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 33-binutils-2.19-data-origin.patch ";              patch -N -p0 < $PATCH_BINUTILS_DIR/33-binutils-2.19-data-origin.patch >>$LogFile 2>&1;                  let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  #double_echo "  DO: 40-binutils-2.19-wrong-arch.patch  ";              patch -N -p0 < $PATCH_BINUTILS_DIR/40-binutils-2.19-wrong-arch.patch >>$LogFile 2>&1;                   let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 41-binutils-2.19-avr25-wraparound-reloc.patch";    patch -N -p0 < $PATCH_LOCAL_DIR/41-binutils-2.19-avr25-wraparound-reloc.patch >>$LogFile 2>&1;                   let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 50-binutils-2.19-xmega.patch       ";              patch -N -p0 < $PATCH_BINUTILS_DIR/50-binutils-2.19-xmega.patch >>$LogFile 2>&1;                        let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 51-binutils-2.19-xmega2.patch      ";              patch -N -p0 < $PATCH_BINUTILS_DIR/51-binutils-2.19-xmega2.patch >>$LogFile 2>&1;                       let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 52-1-xmega_sup.patch               ";              patch -N -p0 < $PATCH_LOCAL_DIR/52-1-xmega_sup.patch >>$LogFile 2>&1;                                   let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  double_echo "  DO: 52-binutils-2.19-atmega32u6.patch  ";              patch -N -p0 < $PATCH_BINUTILS_DIR/52-binutils-2.19-atmega32u6.patch >>$LogFile 2>&1;                   let PATCH_BIN_RES=$PATCH_BIN_RES+$?
+  if [ $PATCH_BIN_RES -eq $SUCCES_RES ]; then date > $BINUTILS_DIR/patch-succes.res; else date > $BINUTILS_DIR/patch-failure.res; fi
+fi;
+
+if [ -e $GCC_DIR/patch-succes.res ]
+then
+  double_echo "===> skipping gcc patches"
+  let PATCH_GCC_RES=$COMPLETE_RES
+else
+  cd $GCC_DIR
+  double_echo "  DO: 20-gcc-4.3.2-libiberty-Makefile.in.patch";          patch -N -p0 < $PATCH_GCC_DIR/20-gcc-4.3.2-libiberty-Makefile.in.patch >>$LogFile 2>&1;                 let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 21-gcc-4.3.2-disable-libssp.patch";                 patch -N -p0 < $PATCH_GCC_DIR/21-gcc-4.3.2-disable-libssp.patch >>$LogFile 2>&1;                        let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 23-gcc-4.3.2-ada-Makefile.patch";                   patch -N -p0 < $PATCH_GCC_DIR/23-gcc-4.3.2-ada-Makefile.patch >>$LogFile 2>&1;                          let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 40-gcc-4.3.2-bug-10768-by-adacore.patch";           patch -N -p0 < $PATCH_GCC_DIR/40-gcc-4.3.2-bug-10768-by-adacore.patch >>$LogFile 2>&1;                  let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 41-gcc-4.3.2-bug-11259_v3.patch";                   patch -N -p0 < $PATCH_GCC_DIR/41-gcc-4.3.2-bug-11259_v3.patch >>$LogFile 2>&1;                          let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 42-gcc-4.3.2-bug-spill-v4.patch";                   patch -N -p0 < $PATCH_GCC_DIR/42-gcc-4.3.2-bug-spill-v4.patch >>$LogFile 2>&1;                          let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 43-gcc-4.3.2-bug-35013.patch";                      patch -N -p0 < $PATCH_GCC_DIR/43-gcc-4.3.2-bug-35013.patch >>$LogFile 2>&1;                             let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 44-gcc-4.3.2-libgcc16.patch";                       patch -N -p0 < $PATCH_GCC_DIR/44-gcc-4.3.2-libgcc16.patch >>$LogFile 2>&1;                              let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 45-gcc-4.3.2-bug-33009.patch";                      patch -N -p0 < $PATCH_GCC_DIR/45-gcc-4.3.2-bug-33009.patch >>$LogFile 2>&1;                             let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 50-gcc-4.3.2-mega256.patch";                        patch -N -p0 < $PATCH_GCC_DIR/50-gcc-4.3.2-mega256.patch >>$LogFile 2>&1;                               let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 51-gcc-4.3.2-mega256-additional.patch";             patch -N -p0 < $PATCH_GCC_DIR/51-gcc-4.3.2-mega256-additional.patch >>$LogFile 2>&1;                    let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 52-gcc-4.3.2-xmega-v9.patch";                       patch -N -p0 < $PATCH_GCC_DIR/52-gcc-4.3.2-xmega-v9.patch >>$LogFile 2>&1;                              let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 53-gcc-4.3.2-xmega2.patch";                         patch -N -p0 < $PATCH_GCC_DIR/53-gcc-4.3.2-xmega2.patch >>$LogFile 2>&1;                                let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 54-gcc-4.3.2-atmega32m1.patch";                     patch -N -p0 < $PATCH_GCC_DIR/54-gcc-4.3.2-atmega32m1.patch >>$LogFile 2>&1;                            let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 55-gcc-4.3.2-atmega32c1.patch";                     patch -N -p0 < $PATCH_GCC_DIR/55-gcc-4.3.2-atmega32c1.patch >>$LogFile 2>&1;                            let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 56-gcc-4.3.2-atmega32u4.patch";                     patch -N -p0 < $PATCH_GCC_DIR/56-gcc-4.3.2-atmega32u4.patch >>$LogFile 2>&1;                            let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 57-gcc-4.3.2-attiny167.patch   ";                   patch -N -p0 < $PATCH_GCC_DIR/57-gcc-4.3.2-attiny167.patch >>$LogFile 2>&1   ;                          let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 58-gcc-4.3.2-remove-atmega32hvb.patch";             patch -N -p0 < $PATCH_GCC_DIR/58-gcc-4.3.2-remove-atmega32hvb.patch >>$LogFile 2>&1;                    let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 59-gcc-4.3.2-attiny13a.patch";                      patch -N -p0 < $PATCH_GCC_DIR/59-gcc-4.3.2-attiny13a.patch >>$LogFile 2>&1;                             let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 60-gcc-4.3.2-atmega32u6.patch";                     patch -N -p0 < $PATCH_GCC_DIR/60-gcc-4.3.2-atmega32u6.patch >>$LogFile 2>&1;                            let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 61-gcc-4.3.2-osmain.patch";                         patch -N -p0 < $PATCH_GCC_DIR/61-gcc-4.3.2-osmain.patch >>$LogFile 2>&1;                                let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 70-gcc-4.3.2-ada-mlib.patch";                       patch -N -p0 < $PATCH_GCC_DIR/70-gcc-4.3.2-ada-mlib.patch >>$LogFile 2>&1;                              let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 71-gcc-4.3.2-ada-freestanding.patch";               patch -N -p0 < $PATCH_GCC_DIR/71-gcc-4.3.2-ada-freestanding.patch >>$LogFile 2>&1;                      let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 72-gcc-4.3.2-ada-timebase.patch";                   patch -N -p0 < $PATCH_GCC_DIR/72-gcc-4.3.2-ada-timebase.patch >>$LogFile 2>&1;                          let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 73-gcc-4.3.2-ada-gnat1_print_path.patch";           patch -N -p0 < $PATCH_GCC_DIR/73-gcc-4.3.2-ada-gnat1_print_path.patch >>$LogFile 2>&1;                  let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 74-gcc-4.3.2-ada-optim_static_addr.patch";          patch -N -p0 < $PATCH_GCC_DIR/74-gcc-4.3.2-ada-optim_static_addr.patch >>$LogFile 2>&1;                 let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  double_echo "  DO: 75-gcc-4.3.2-builtins_v6.patch";                    patch -N -p0 < $PATCH_GCC_DIR/75-gcc-4.3.2-builtins_v6.patch >>$LogFile 2>&1;                           let PATCH_GCC_RES=$PATCH_GCC_RES+$?
+  if [ $PATCH_GCC_RES -eq $SUCCES_RES ]; then date > $GCC_DIR/patch-succes.res; else date > $GCC_DIR/patch-failure.res; fi
+fi
+
+if [ -e $LIBC_DIR/patch-succes.res ]
+then
+  double_echo "===> skipping libc patches"
+  let PATCH_LIBC_RES=$COMPLETE_RES
+else
+  cd $LIBC_DIR
+  double_echo "  DO: 30-avr-libc-1.6.4-dwarf2.patch  ";                  patch -N -p0 < $PATCH_LIBC_DIR/30-avr-libc-1.6.4-dwarf2.patch >>$LogFile 2>&1;                          let PATCH_LIBC_RES=$PATCH_LIBC_RES+$?
+  double_echo "  DO: 31-avr-libc-1.6.4-builtins.patch";                  patch -N -p0 < $PATCH_LIBC_DIR/31-avr-libc-1.6.4-builtins.patch >>$LogFile 2>&1;                        let PATCH_LIBC_RES=$PATCH_LIBC_RES+$?
+  #double_echo "  DO: 40-avr-libc-1.6.4-fix-attiny13a-arch.patch";        patch -N -p0 < $PATCH_LIBC_DIR/40-avr-libc-1.6.4-fix-attiny13a-arch.patch >>$LogFile 2>&1;              let PATCH_LIBC_RES=$PATCH_LIBC_RES+$?
+  #double_echo "  DO: 50-avr-libc-fixversion.patch";                      patch -N -p0 < $PATCH_LOCAL_DIR/50-avr-libc-fixversion.patch >>$LogFile 2>&1;                           let PATCH_LIBC_RES=$PATCH_LIBC_RES+$?
+  if [ $PATCH_LIBC_RES -eq $SUCCES_RES ]; then date > $LIBC_DIR/patch-succes.res; else date > $LIBC_DIR/patch-failure.res; fi
+fi
+
+
+if [ -e $DUDE_DIR/patch-succes.res ]
+then
+  double_echo "===> skipping avrdude patches"
+  let PATCH_DUDE_RES=$COMPLETE_RES
+else
+  cd $DUDE_DIR
+  #double_echo "  DO: usleep-avrdude.patch";                              patch -N -p0 < $PATCH_LOCAL_DIR/usleep-avrdude.patch >>$LogFile 2>&1;                                   let PATCH_DUDE_RES=$PATCH_DUDE_RES+$?
+  if [ $PATCH_DUDE_RES -eq $SUCCES_RES ]; then date > $DUDE_DIR/patch-succes.res; else date > $DUDE_DIR/patch-failure.res; fi
+fi
+
+
+if   [ $PATCH_BIN_RES -eq $COMPLETE_RES ] && [ $PATCH_GCC_RES -eq $COMPLETE_RES ] && [ $PATCH_LIBC_RES -eq $COMPLETE_RES ] && [ $PATCH_DUDE_RES -eq $COMPLETE_RES ]; then let PATCH_RES=$COMPLETE_RES
+elif ( [ $PATCH_BIN_RES -eq $SUCCES_RES ]  || [ $PATCH_BIN_RES -eq $COMPLETE_RES ] )  &&
+     ( [ $PATCH_GCC_RES -eq $SUCCES_RES ]  || [ $PATCH_GCC_RES -eq $COMPLETE_RES ] )  &&
+     ( [ $PATCH_LIBC_RES -eq $SUCCES_RES ] || [ $PATCH_LIBC_RES -eq $COMPLETE_RES ] ) &&
+     ( [ $PATCH_DUDE_RES -eq $SUCCES_RES ] || [ $PATCH_DUDE_RES -eq $COMPLETE_RES ] )
+then let PATCH_RES=$SUCCES_RES
+else
+  let PATCH_RES=$FAIL_RES
+  report
+fi
+
+
+double_echo "===> making install directories"
+mkdir -p $PREFIX
+mkdir -p $PREFIX
+
+double_echo "===> making build directories"
+mkdir -p $BINUTILS_DIR-build
+mkdir -p $GCC_DIR-build
+mkdir -p $LIBC_DIR-build
+mkdir -p $DUDE_DIR-build
+
+
+double_echo "===> cleaning build directories"
+if [ -e $BINUTILS_DIR-build/succes.res ]; then double_echo "- bin-utils allready succesfully compiled, skipping clean"; else rm -rf $BINUTILS_DIR-build/*;  fi
+if [ -e $GCC_DIR-build/succes.res ];      then double_echo "- gcc allready succesfully compiled, skipping clean";       else rm -rf $GCC_DIR-build/*;       fi
+if [ -e $LIBC_DIR-build/succes.res ];     then double_echo "- libc allready succesfully compiled, skipping clean";      else rm -rf $LIBC_DIR-build/*;      fi
+if [ -e $DUDE_DIR-build/succes.res ];     then double_echo "- avrdude allready succesfully compiled, skipping clean";   else rm -rf $DUDE_DIR-build/*;      fi
+
+
+if [ -e $BINUTILS_DIR-build/succes.res ]
+then
+  double_echo "===> bin-utils allready succesfully compiled and installed, complete"
+  let UTILS_RES=$COMPLETE_RES
+else
+  double_echo "===> compiling and installing bin-utils $UTILS_VERSIE"
+  cd $BINUTILS_DIR-build
+  ../binutils-$UTILS_VERSIE/configure --prefix=$PREFIX --target=avr --disable-nls --with-gnu-ld --with-gnu-as --enable-install-libbfd --with-dwarf2  --disable-werror CFLAGS="-Wno-format-security " >>$LogFile 2>&1
+  make >>$LogFile 2>&1 && make install >>$LogFile 2>&1
+  let UTILS_RES=$?
+fi
+if [ $UTILS_RES -eq $SUCCES_RES ]; then date > $BINUTILS_DIR-build/succes.res; fi
+if [ $UTILS_RES -ne $SUCCES_RES ] && [ $UTILS_RES -ne $COMPLETE_RES ]; then report; fi
+
+
+if [ -e $GCC_DIR-build/succes.res ]
+then
+  double_echo "===> gcc allready succesfully compiled and installed, complete"
+  let GCC_RES=$COMPLETE_RES
+else
+  double_echo "===> compiling and installing gcc $GCC_VERSIE"
+  cd $GCC_DIR-build
+  ../gcc-$GCC_VERSIE/configure --prefix=$PREFIX --target=avr --with-gnu-ld --with-gnu-as --enable-languages=c,c++ --disable-nls --disable-libssp --with-dwarf2 >>$LogFile 2>&1
+  make >>$LogFile 2>&1 && make install >>$LogFile 2>&1
+  let GCC_RES=$?
+fi
+if [ $GCC_RES -eq $SUCCES_RES ]; then date > $GCC_DIR-build/succes.res; fi
+if [ $GCC_RES -ne $SUCCES_RES ] && [ $GCC_RES -ne $COMPLETE_RES ]; then report; fi
+
+
+if [ -e $LIBC_DIR-build/succes.res ]
+then
+  double_echo "===> avr-libc allready succesfully compiled and installed, complete"
+  let LIBC_RES=$COMPLETE_RES
+else
+  double_echo "===> compiling and installing avr-libc $LIBC_VERSIE"
+  cd $LIBC_DIR
+  ./bootstrap >>$LogFile 2>&1
+  if [ $? -eq $SUCCES_RES ]
+  then
+    cd $LIBC_DIR-build
+    ../avr-libc-$LIBC_VERSIE/configure --prefix=$PREFIX --build=`../avr-libc-$LIBC_VERSIE/config.guess` --host=avr >>$LogFile 2>&1
+    make >>$LogFile 2>&1 && make install >>$LogFile 2>&1
+    let LIBC_RES=$?
+  else
+    let LIBC_RES=$FAIL_RES
+  fi
+fi
+if [ $LIBC_RES -eq $SUCCES_RES ]; then date > $LIBC_DIR-build/succes.res; fi
+if [ $LIBC_RES -ne $SUCCES_RES ] && [ $LIBC_RES -ne $COMPLETE_RES ]; then report; fi
+
+
+if [ -e $DUDE_DIR-build/succes.res ]
+then
+  double_echo "===> avr-dude allready succesfully compiled and installed, complete"
+  let DUDE_RES=$COMPLETE_RES
+else
+  double_echo "===> compiling and installing avr-dude $DUDE_VERSIE"
+  cd $DUDE_DIR-build
+  ../avrdude-$DUDE_VERSIE/configure --prefix=$PREFIX >>$LogFile 2>&1
+  make >>$LogFile 2>&1 && make install >>$LogFile 2>&1
+  let DUDE_RES=$?
+fi
+if [ $DUDE_RES -eq $SUCCES_RES ]; then date > $DUDE_DIR-build/succes.res; fi
+if [ $DUDE_RES -ne $SUCCES_RES ] && [ $DUDE_RES -ne $COMPLETE_RES ]; then report; fi
+
+double_echo "===> Done                              "
+double_echo "                                       "
+double_echo "You may call Install_Scripts/install_toolchain --clean now, to clean up the mess."
+
+report
+

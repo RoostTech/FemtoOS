@@ -1,0 +1,548 @@
+#!/bin/bash
+# run me from the IDE directory like this ./script/compile help
+#
+# Femto OS v 0.92 - Copyright (C) 2008  Ruud Vlaming
+#
+# This file is part of the Femto OS distribution.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Please note that, due to the GPLv3 license, for application of this
+# work and/or combined work in embedded systems special obligations apply.
+# If these are not to you liking, please know the Femto OS is dual
+# licensed. A commercial license and support are available.
+# See http://www.femtoos.org/ for details.
+#
+
+WorkDir=$PWD
+ToolDir=$PWD/proc/bin/
+ScriptDir=$PWD/script
+CompileResultFile=$WorkDir/../MainCode/binaries/compile_results
+CompileRegisterFile=$WorkDir/../MainCode/registers/compile_registers
+Project_File=$ScriptDir/default_project
+Device_File=$ScriptDir/default_device
+Options_File=$ScriptDir/default_options
+
+let PORT_INCOMPATIBLE_OPTIONS=3
+let PORT_NOT_PORTED=2
+let PORT_DEVICE_TOO_SMALL=1
+let PORT_OK=0
+
+
+function port_matrix()
+{
+local PROJECT=$1
+local TARGET=$2
+local OPTION=$3
+#Not all example projects are ported to all architectures. Here you can see which ports have been done.
+# return 0 if the port is done, return 1 otherwise. Default is zero.
+#reject policy
+
+if [[ $PROJECT == "Shell" ]] && [[ $OPTION == "compact" ]];        then return $PORT_INCOMPATIBLE_OPTIONS; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $OPTION == "compact" ]];    then return $PORT_INCOMPATIBLE_OPTIONS; fi
+
+if [[ $PROJECT == "Watchdog" ]] && [[ $TARGET == "attiny24" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Watchdog" ]] && [[ $TARGET == "attiny25" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Watchdog" ]] && [[ $TARGET == "attiny261" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Watchdog" ]] && [[ $TARGET == "attiny2313" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Rendezvous" ]] && [[ $TARGET == "attiny24" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Rendezvous" ]] && [[ $TARGET == "attiny25" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Rendezvous" ]] && [[ $TARGET == "attiny261" ]];  then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Rendezvous" ]] && [[ $TARGET == "attiny2313" ]]; then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny24" ]];       then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny25" ]];       then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny261" ]];      then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny2313" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny44" ]];       then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny45" ]];       then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny461" ]];      then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny43u" ]];      then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Passon" ]] && [[ $TARGET == "attiny48" ]];       then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny24" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny25" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny261" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny2313" ]];  then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny44" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny45" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny461" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny43u" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Interrupt" ]] && [[ $TARGET == "attiny48" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny24" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny25" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny261" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny2313" ]];   then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny44" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny45" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny461" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny43u" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny48" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "attiny88" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "atmega48" ]];     then return $PORT_DEVICE_TOO_SMALL; fi
+if [[ $PROJECT == "Remember" ]] && [[ $TARGET == "atmega48p" ]];    then return $PORT_DEVICE_TOO_SMALL; fi
+
+#accept policy
+if [[ $PROJECT == "Bare" ]];                                       then return $PORT_OK; fi
+if [[ $PROJECT == "Minimal" ]];                                    then return $PORT_OK; fi
+if [[ $PROJECT == "FlashLeds" ]];                                  then return $PORT_OK; fi
+if [[ $PROJECT == "HelloWorld" ]];                                 then return $PORT_OK; fi
+if [[ $PROJECT == "Watchdog" ]];                                   then return $PORT_OK; fi
+if [[ $PROJECT == "Rendezvous" ]];                                 then return $PORT_OK; fi
+if [[ $PROJECT == "Queus" ]];                                      then return $PORT_OK; fi
+if [[ $PROJECT == "Hooks" ]];                                      then return $PORT_OK; fi
+if [[ $PROJECT == "Sleep" ]];                                      then return $PORT_OK; fi
+if [[ $PROJECT == "Interrupt" ]];                                  then return $PORT_OK; fi
+if [[ $PROJECT == "Shell" ]] && [[ $TARGET == "attiny861" ]];      then return $PORT_OK; fi
+if [[ $PROJECT == "Passon" ]];                                     then return $PORT_OK; fi
+if [[ $PROJECT == "Remember" ]];                                   then return $PORT_OK; fi
+
+#default reject
+return $PORT_NOT_PORTED
+
+}
+
+
+function sequential_compile()
+{
+local PROJECT=$1
+local COMP_OPTIONS=$2
+local ASSM_OPTIONS=$3
+local LINK_OPTIONS=$4
+
+let Result=0
+# Invoking: GCC C Compiler
+$ToolDir""avr-gcc $COMP_OPTIONS -o"code_Test$PROJECT.o" "../src/code_Test$PROJECT.c"
+let Result=$Result+$?
+$ToolDir""avr-gcc $COMP_OPTIONS -o"femtoos_core.o" "../src/femtoos_core.c"
+let Result=$Result+$?
+$ToolDir""avr-gcc $COMP_OPTIONS -o"femtoos_port.o" "../src/femtoos_port.c"
+let Result=$Result+$?
+$ToolDir""avr-gcc $COMP_OPTIONS -o"femtoos_shared.o" "../src/femtoos_shared.c"
+let Result=$Result+$?
+$ToolDir""avr-gcc $ASSM_OPTIONS -o"femtoos_startup.o" "../src/femtoos_startup.s"
+let Result=$Result+$?
+# Invoking: GCC C Linker
+$ToolDir""avr-gcc $LINK_OPTIONS -o"main.elf"  ./femtoos_shared.o ./femtoos_core.o ./femtoos_port.o ./femtoos_startup.o ./code_Test$PROJECT.o
+let Result=$Result+$?
+
+return $Result
+}
+
+function parallel_compile()
+{
+local PROJECT=$1
+local COMP_OPTIONS=$2
+local ASSM_OPTIONS=$3
+local LINK_OPTIONS=$4
+
+let Result=0
+# Invoking: GCC C Compiler
+$ToolDir""avr-gcc $COMP_OPTIONS -o"code_Test$PROJECT.o" "../src/code_Test$PROJECT.c" &
+$ToolDir""avr-gcc $COMP_OPTIONS -o"femtoos_core.o" "../src/femtoos_core.c" &
+$ToolDir""avr-gcc $COMP_OPTIONS -o"femtoos_port.o" "../src/femtoos_port.c" &
+$ToolDir""avr-gcc $COMP_OPTIONS -o"femtoos_shared.o" "../src/femtoos_shared.c" &
+$ToolDir""avr-gcc $ASSM_OPTIONS -o"femtoos_startup.o" "../src/femtoos_startup.s" &
+wait
+# Invoking: GCC C Linker (assume everything went well ... )
+$ToolDir""avr-gcc $LINK_OPTIONS -o"main.elf"  ./femtoos_shared.o ./femtoos_core.o ./femtoos_port.o ./femtoos_startup.o ./code_Test$PROJECT.o
+let Result=$Result+$?
+
+return $Result
+}
+
+function combined_compile()
+{
+# this is still an experimental option and will not function as long as the
+# sources contain portJumps in all the privXXX methodes.
+local PROJECT=$1
+local COMP_OPTIONS=$2
+local ASSM_OPTIONS=$3
+local LINK_OPTIONS=$4
+
+let Result=0
+# Invoking: GCC C Compiler
+$ToolDir""avr-gcc $COMP_OPTIONS -combine -o"combined.o" "../src/femtoos_shared.c" "../src/femtoos_core.c" "../src/femtoos_port.c" "../src/code_Test$PROJECT.c"
+let Result=$Result+$?
+$ToolDir""avr-gcc $ASSM_OPTIONS -o"femtoos_startup.o" "../src/femtoos_startup.s"
+let Result=$Result+$?
+# Invoking: GCC C Linker (assume everything went well ... )
+$ToolDir""avr-gcc $LINK_OPTIONS -o"main.elf"  ./combined.o ./femtoos_startup.o
+let Result=$Result+$?
+
+return $Result
+}
+
+function do_compile()
+{
+local PROJECT=$1
+local TARGET=$2
+local OPTS1=$3
+local OPTS2=$4
+local OPTSextra=$5
+
+local COMP_OPTIONS="-c"
+local ASSM_OPTIONS="-c -x assembler-with-cpp"
+local LINK_OPTIONS=""
+#local LINK_OPTIONS="-minit-stack='xOS+xOSstackShift'"
+
+# Get the options from file (do not use the @ option of gcc, it does not work reliable under cygwin)
+GCC_OPTIONS=`cat $ScriptDir/gcc_options`
+
+# See for which target we must compile
+COMP_OPTIONS+=" -mmcu=$TARGET"
+ASSM_OPTIONS+=" -mmcu=$TARGET"
+LINK_OPTIONS+=" -mmcu=$TARGET"
+
+#COMP_OPTIONS+=" @$ScriptDir/gcc_options $OPTSextra -DdefExtReduceProEpilogue=cfgBikini -I../include -I../devices -I../src"
+#ASSM_OPTIONS+=" @$ScriptDir/gcc_options $OPTSextra -DdefExtReduceProEpilogue=cfgBikini -I../include -I../devices -I../src"
+#LINK_OPTIONS+=" @$ScriptDir/gcc_options -Wl,-Map=main.map"
+COMP_OPTIONS+=" $GCC_OPTIONS $OPTSextra -DdefExtReduceProEpilogue=cfgBikini -I../include -I../devices -I../src"
+ASSM_OPTIONS+=" $GCC_OPTIONS $OPTSextra -DdefExtReduceProEpilogue=cfgBikini -I../include -I../devices -I../src"
+LINK_OPTIONS+=" $GCC_OPTIONS -Wl,-Map=main.map"
+
+# See if we must produce compact code (code inside vector definitions)
+if [[ $OPTS1 == "compact" ]] || [[ $OPTS2 == "compact" ]]
+then
+  COMP_OPTIONS+=" -DdefExtGCCstartup=cfgReplace -DdefExtOptimized=cfgTrue -DdefExtZeroPageStack=cfgTrue"
+  ASSM_OPTIONS+=" -DdefExtGCCstartup=cfgReplace -DdefExtOptimized=cfgTrue -DdefExtZeroPageStack=cfgTrue"
+  LINK_OPTIONS+=" -nostartfiles"
+fi
+
+# I do not completely remove this, maybe we need it later.
+# See if we must used my hacked backend compiler
+# At this moment we do not make use of a hack in the compiler, but we leave the code in this script
+# for future use.
+#if [[ $OPTS1 == "hack" ]] || [[ $OPTS2 == "hack" ]]
+#then
+#  COMP_OPTIONS+=" -DdefExtBackendHack"
+#  ASSM_OPTIONS+=" -DdefExtBackendHack"
+#fi
+
+# do one project compile
+#  sequential_compile $PROJECT "$COMP_OPTIONS" "$ASSM_OPTIONS" "$LINK_OPTIONS"
+  parallel_compile $PROJECT "$COMP_OPTIONS" "$ASSM_OPTIONS" "$LINK_OPTIONS"
+#  combined_compile $PROJECT "$COMP_OPTIONS" "$ASSM_OPTIONS" "$LINK_OPTIONS"
+
+# Postprocessing (see object_info script)
+$ToolDir""avr-objcopy -O binary -R .eeprom  main.elf main.bin
+$ToolDir""avr-objcopy -O ihex -R .eeprom  main.elf main.hex
+$ToolDir""avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 --no-change-warnings -O ihex main.elf main.eep
+$ToolDir""avr-objdump -dt main.elf > main.lss
+$ScriptDir/test_fp_use main.lss
+$ScriptDir/overall_info main.lss femtoos_shared.i main.map > main.defs
+$ScriptDir/overall_info main.lss femtoos_shared.i main.map registers > main.regs
+$ToolDir""avr-size main.elf | tee main.size
+
+# Save the binary for publication
+mkdir -p ../../../../MainCode/binaries/$TARGET
+mkdir -p ../../../../MainCode/registers/$PROJECT
+cp main.bin ../../../../MainCode/binaries/$TARGET/main_$PROJECT.bin
+cp main.regs ../../../../MainCode/registers/$PROJECT/main_$TARGET.regs
+cp main.regs main-$PROJECT-$TARGET.regs
+md5sum main-$PROJECT-$TARGET.regs >> $CompileRegisterFile
+
+cd ../..
+
+return $Result
+}
+
+
+function compile_project()
+{
+
+# Clean up
+mkdir -p $WorkDir/workspace/FemtoOS_$PROJECT/Release
+rm -rf   $WorkDir/workspace/FemtoOS_$PROJECT/Release/*
+cd       $WorkDir/workspace/FemtoOS_$PROJECT/Release
+
+port_matrix $1 $2 $3
+let RES=$?
+if [[ $RES == $PORT_INCOMPATIBLE_OPTIONS ]]
+then
+  echo "  ~opts       0       0       0       0 main.elf"
+  return 0;
+fi
+
+if [[ $RES == $PORT_NOT_PORTED ]]
+then
+  echo "  ~port       0       0       0       0 main.elf"
+  return 0;
+fi
+
+if [[ $RES == $PORT_DEVICE_TOO_SMALL ]]
+then
+  echo "  >size       0       0       0       0 main.elf"
+  return 0;
+fi
+
+do_compile $1 $2 "$3" "$4" "$5" 2>>$CompileResultFile
+#do_compile $1 $2 "$3" "$4" "$5"
+
+if [[ $? != $PORT_OK ]]
+then
+  echo "   FAIL       0       0       0       0 main.elf"
+  return 0;
+fi
+
+}
+
+function cross_compile()
+{
+local PROJECT=$1
+local FORM=$2
+local OPTS1=$3
+local OPTS2=$4
+local OPTSextra=$5
+if [[ $FORM != "cross" ]]
+then
+  #Hmm, just to outline the result, is this needed?
+  #Yeah, spaces inside the $FORM does no pass escaping.
+  if [[ ${#FORM} == 7 ]];  then compile_project $PROJECT "$FORM" "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,      "   '$FORM'     '$PROJECT'")' | tee -a $CompileResultFile;  fi;
+  if [[ ${#FORM} == 8 ]];  then compile_project $PROJECT "$FORM" "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,      "   '$FORM'    '$PROJECT'")' | tee -a $CompileResultFile;  fi;
+  if [[ ${#FORM} == 9 ]];  then compile_project $PROJECT "$FORM" "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,      "   '$FORM'   '$PROJECT'")' | tee -a $CompileResultFile;  fi;
+  if [[ ${#FORM} == 10 ]]; then compile_project $PROJECT "$FORM" "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,      "   '$FORM'  '$PROJECT'")' | tee -a $CompileResultFile;  fi;
+  if [[ ${#FORM} == 11 ]]; then compile_project $PROJECT "$FORM" "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,      "   '$FORM' '$PROJECT'")' | tee -a $CompileResultFile;  fi;
+else
+  compile_project $PROJECT  attiny2313  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny2313  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny43u   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny43u   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny24    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny24    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny44    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny44    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny84    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny84    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny25    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny25    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny45    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny45    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny85    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny85    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny261   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny261   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny461   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny461   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny861   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny861   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny48    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny48    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  attiny88    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   attiny88    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega8     "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega8     '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega16    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega16    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega32    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega32    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega64    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega64    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega128   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega128   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega162   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega162   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega640   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega640   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega1280  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega1280  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega1281  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega1281  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega2560  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega2560  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega2561  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega2561  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega48    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega48    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega88    "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega88    '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega168   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega168   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega48p   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega48p   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega88p   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega88p   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega168p  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega168p  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega328p  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega328p  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega164p  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega164p  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega324p  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega324p  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega644p  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega644p  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega1284p "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega1284p '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega644   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega644   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega325   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega325   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega3250  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega3250  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega645   "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega645   '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega6450  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega6450  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega325p  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega325p  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega3250p "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega3250p '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega8515  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega8515  '$PROJECT'")' | tee -a $CompileResultFile
+  compile_project $PROJECT  atmega8535  "$OPTS1" "$OPTS2" "$OPTSextra"  | grep "main.elf" | awk 'sub(/main\.elf/,"   atmega8535  '$PROJECT'")' | tee -a $CompileResultFile
+fi
+}
+
+function filterAnd()
+{ for arg1 in $1; do
+    for arg2 in $2; do
+      let lastpos=${#arg2}-1
+      if [[ ${arg2:$lastpos:1} == "@" ]]
+      then
+        if [[ ${arg1:0:$lastpos} == ${arg2:0:$lastpos} ]]; then echo $arg1; return 0;fi
+      else 
+        if [[ $arg1 == $arg2 ]];  then echo $arg1; return 0; fi
+      fi
+    done
+  done; }
+
+function filterXor()
+{ for arg1 in $1; do
+    PRESENT=false;
+    for arg2 in $2; do
+      if [[ $arg1 == $arg2 ]]; then PRESENT=true; fi
+    done
+    if [[ $PRESENT == false ]]; then echo $arg1; return 0; fi
+  done; }
+
+function selectPar()
+{ local ParName=$1
+  local ParVar=$2
+  local ParFile=$3
+  local ParStrings=$4
+  local ParFac=$5
+  local ParComlen
+  local Result
+  Result=`filterAnd "$ParVar" "$ParStrings"`
+  if [[ $Result == "" ]] && [ -e  $ParFile ];
+  then
+    Result=`cat $ParFile`;
+    Result=`filterAnd "$Result" "$ParStrings"`
+  fi
+  if [[ $Result == "" ]] && [[ $ParFac == "check" ]] 
+  then
+    echo "$1 parameter is missing: try ./script/compile help" >&2
+    return 1
+  fi
+  echo $Result; }
+
+HelpStrings="help -help --help ? -? Help HELP -HELP --HELP"
+ProjectStrings="
+   Bare         Minimal        FlashLeds     Watchdog      Rendezvous    Queus         Sleep
+   Hooks        Interrupt      Shell         Passon        Remember      HelloWorld"
+DeviceStrings="
+   attiny2313    attiny24      attiny25      attiny261     attiny43u     attiny44      attiny45
+   attiny461     attiny48      attiny84      attiny85      attiny861     attiny88      atmega128
+   atmega1280    atmega1281    atmega1284p   atmega16      atmega162     atmega164p    atmega168
+   atmega2560    atmega168p    atmega2561    atmega32      atmega324p    atmega325p    atmega3250p
+   atmega328p    atmega325     atmega3250    atmega48      atmega48p     atmega64      atmega640
+   atmega644     atmega644p    atmega645     atmega6450    atmega8       atmega8515    atmega8535
+   atmega88      atmega88p"
+
+#Start of main processing.
+
+Help=`filterAnd "$*" "$HelpStrings"`
+#Project=`filterAnd "$*" "$ProjectStrings all"`
+#evice=`filterAnd "$*" "$DeviceStrings cross"`
+#Compact=`filterAnd "$*" "compact"`
+#Unknown=`filterXor "$*" "$Help $Project $Device $Compact"`
+
+# Test if we are in the correct directory
+if [[ "$WorkDir" != */IDE ]] && [[ "$WorkDir" != *\IDE ]] 
+then 
+  echo "Start me in the IDE directory of the Femto OS distribution, with ./script/compile "
+  exit 0
+fi
+
+# See if help is requested
+if [[ $Help != "" ]]
+then
+  echo "Usage: ./script/compile [all|<Project>] [cross|<Device>] [compact] [info] [system] [clean]"
+  echo "<Project> = one of the following projects: $ProjectStrings"
+  echo "<Device> =  one of the following devices: $DeviceStrings"
+  echo ""
+  echo "Option 'compact' compiles with cfySysOptimized set to cfgTrue"
+  echo "Option 'info' generates more information on display about the "
+  echo "  compile result, but only if one project and one device is compiled."
+  echo "Option 'system' call the avr tools on your system rather then the"
+  echo "  ones build by the toolchain. Of course, they must be installed."
+  echo "Option 'clean' deletes the Release subrirectory of the project or"
+  echo "  all projects is requested. No compile takes place."
+  echo ""
+  echo "If the Device or Project is not specified, the last (succesfull) values are used."
+  echo "Options are not stored."
+  exit 0
+fi
+
+# Extract the command parameters, and get them form file if they were not specified
+set -e
+Project=`selectPar "Project" "$*" "$Project_File" "$ProjectStrings all" "check"`
+Device=`selectPar "Device" "$*" "$Device_File" "$DeviceStrings cross" "check"`
+Compact=`selectPar "Compact" "$*" "$Options_File" "compact" "nocheck"`
+Info=`selectPar "Info" "$*" "$Options_File" "info" "nocheck"`
+System=`selectPar "System" "$*" "$Options_File" "system" "nocheck"`
+Clean=`selectPar "System" "$*" "$Options_File" "clean" "nocheck"`
+set +e
+
+# Test if there were any parameters no recognized
+Unknown=`filterXor "$*" "$Help $Project $Device $Compact $Info $System $Clean"`
+if [[ $Unknown != "" ]]
+then
+  echo "Unknown parameter: $Unknown, try ./script/compile help"
+  exit 1
+fi
+
+# remove the option if it starts with - maybe later
+#if [[ $Compact == "-compact" ]]; then Compact=""; CompactStore=""; fi;
+#if [[ $Info == "-info" ]]; then Info=""; InfoStore=""; fi;
+#if [[ $Compact == "+compact" ]]; then Compact="compact"; CompactStore="+compact"; fi;
+#if [[ $Info == "+info" ]]; then Info="info"; InfoStore="+info"; fi;
+
+# Save the parameters for the next time
+echo "$Project" > $Project_File
+echo "$Device" > $Device_File
+#echo "$Compact $Info" > $Options_File
+
+#if [[ $System == "system" ]]; then ToolDir=""; fi;
+if [[ $System == "system" ]]; then ToolDir=""; fi;
+
+mkdir -p ../MainCode/binaries
+mkdir -p ../MainCode/registers
+rm -rf ../MainCode/binaries/*
+rm -rf ../MainCode/registers/*
+date > $CompileResultFile
+date > $CompileRegisterFile
+
+if [[ $Clean == "clean" ]]
+then
+  if [[ $Project == "all" ]]
+  then
+    rm -rf $WorkDir/workspace/FemtoOS_Bare/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Minimal/Release
+    rm -rf $WorkDir/workspace/FemtoOS_FlashLeds/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Watchdog/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Rendezvous/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Queus/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Sleep/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Hooks/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Interrupt/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Shell/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Passon/Release
+    rm -rf $WorkDir/workspace/FemtoOS_Remember/Release
+    rm -rf $WorkDir/workspace/FemtoOS_HelloWorld/Release
+  else
+    rm -rf $WorkDir/workspace/FemtoOS_$Project/Release
+  fi;
+  exit 0;
+fi
+
+echo -e "\033[31m   text    data     bss     dec     hex    device      project\033[0m"
+if [[ $Project != "all" ]]
+then
+  cross_compile $Project $Device $Compact
+  if [[ $Device != "cross" ]] && [[ $Info == "info" ]]
+  then
+    ReleaseDir=$WorkDir/workspace/FemtoOS_$Project/Release
+    echo ""
+    $ScriptDir/overall_info $ReleaseDir/main.lss $ReleaseDir/femtoos_shared.i $ReleaseDir/main.map "shell"
+    echo ""
+    echo -e "\033[31m   Errors and warnings === (see Maincode/binaries/compile_results for more details) ==================\033[0m";
+    grep -e "error" $CompileResultFile | sort | uniq | awk '{gsub("^.*/",""); print("  ",$0)}'
+    grep -e "undefined" $CompileResultFile | sort | uniq | awk '{gsub("^.*/",""); print("  ",$0)}'
+    grep -e "warning" $CompileResultFile | sort | uniq | awk '{gsub("^.*/",""); print("  ",$0)}'
+    echo ""
+  fi;
+else
+  #Shell and interrupt cannot be build in compact mode
+  #But we don't want to exclude them here.
+  cross_compile Bare       $Device $Compact
+  cross_compile Minimal    $Device $Compact
+  cross_compile FlashLeds  $Device $Compact
+  cross_compile Watchdog   $Device $Compact
+  cross_compile Rendezvous $Device $Compact
+  cross_compile Queus      $Device $Compact
+  cross_compile Sleep      $Device $Compact
+  cross_compile Hooks      $Device $Compact
+  cross_compile Interrupt  $Device
+  cross_compile Shell      $Device
+  cross_compile Passon     $Device $Compact
+  cross_compile Remember   $Device $Compact
+  cross_compile HelloWorld $Device $Compact
+fi
+

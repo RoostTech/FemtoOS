@@ -1,0 +1,1 @@
+-save-temps -mint8 -Wl,--defsym=__stack=xOS+xOSstackShift --param inline-call-cost=2 -ffunction-sections -Wl,--gc-sections -Wl,--relax -Wall -Wno-main -Winline -Wundef -gdwarf-2 -Os -funsigned-char -fomit-frame-pointer -fpack-struct -fshort-enums

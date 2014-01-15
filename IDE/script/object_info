@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Femto OS v 0.92 - Copyright (C) 2008  Ruud Vlaming
+#
+# This file is part of the Femto OS distribution.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Please note that, due to the GPLv3 license, for application of this
+# work and/or combined work in embedded systems special obligations apply.
+# If these are not to you liking, please know the Femto OS is dual
+# licensed. A commercial license and support are available.
+# See http://www.femtoos.org/ for details.
+#
+
+../../../proc/bin/avr-objcopy -O binary -R .eeprom  main.elf main.bin
+../../../proc/bin/avr-objcopy -O ihex -R .eeprom  main.elf main.hex
+../../../proc/bin/avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 --no-change-warnings -O ihex main.elf main.eep
+../../../proc/bin/avr-objdump -dt main.elf > main.lss
+../../../script/test_fp_use main.lss
+../../../script/overall_info main.lss femtoos_shared.i main.map > main.defs
+echo ""
+../../../proc/bin/avr-size main.elf | tee main.size
+../../../script/overall_info main.lss femtoos_shared.i main.map labels
+

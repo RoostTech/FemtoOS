@@ -1,0 +1,78 @@
+<AVRStudio>
+  <MANAGEMENT>
+    <ProjectName>FemtoOS_XXXXX</ProjectName>
+    <Created>23-Nov-2009 20:07:42</Created>
+    <LastEdit>23-Nov-2009 20:16:21</LastEdit>
+    <ICON>241</ICON>
+    <ProjectType>0</ProjectType>
+    <Created>23-Nov-2009 20:07:42</Created>
+    <Version>4</Version>
+    <Build>4, 18, 0, 670</Build>
+    <ProjectTypeName>AVR GCC</ProjectTypeName>
+  </MANAGEMENT>
+  <DEBUG_TARGET>
+    <WATCHNAMES/>
+  </DEBUG_TARGET>
+  <AVRGCCPLUGIN>
+      <FILES>
+        <SOURCEFILE>..\..\..\MainCode\femtoos_source\femtoos_startup.s</SOURCEFILE>
+        <SOURCEFILE>..\..\..\MainCode\femtoos_source\femtoos_port.c</SOURCEFILE>
+        <SOURCEFILE>..\..\..\MainCode\femtoos_source\femtoos_shared.c</SOURCEFILE>
+        <SOURCEFILE>..\..\..\MainCode\femtoos_source\femtoos_core.c</SOURCEFILE>
+        <SOURCEFILE>code_TestXXXXX.c</SOURCEFILE>
+        <HEADERFILE>config_application.h</HEADERFILE>
+      </FILES>
+      <CONFIGS>
+        <CONFIG>
+          <NAME>standard</NAME>
+          <USESEXTERNALMAKEFILE>NO</USESEXTERNALMAKEFILE>
+          <EXTERNALMAKEFILE/>
+          <PART>atmega8</PART>
+          <HEX>1</HEX>
+          <LIST>1</LIST>
+          <MAP>1</MAP>
+          <OUTPUTFILENAME>FemtoOS_XXXXX.elf</OUTPUTFILENAME>
+          <OUTPUTDIR>standard\</OUTPUTDIR>
+          <ISDIRTY>1</ISDIRTY>
+          <OPTIONS/>
+          <INCDIRS>
+            <INCLUDE>..\..\..\MainCode\femtoos_headers\</INCLUDE>
+            <INCLUDE>..\..\..\MainCode\femtoos_devices\</INCLUDE>
+            <INCLUDE>.\</INCLUDE>
+          </INCDIRS>
+          <LIBDIRS/>
+          <LIBS/>
+          <LINKOBJECTS/>
+          <OPTIONSFORALL>-Wall -gdwarf-2 -Os -funsigned-char -fpack-struct -fshort-enums  -mint8  -Wl,--defsym=__stack=xOS+xOSstackShift  --param inline-call-cost=2  -ffunction-sections  -Wl,--gc-sections  -Wl,--relax  -Wno-main  -Winline  -Wundef  -DF_CPU=8000000UL -fomit-frame-pointer </OPTIONSFORALL>
+          <LINKEROPTIONS> -mint8  -Wl,--defsym=__stack=xOS+xOSstackShift  --param inline-call-cost=2  -ffunction-sections  -Wl,--gc-sections  -Wl,--relax  -Wno-main  -Winline  -Wundef  -fomit-frame-pointer </LINKEROPTIONS>
+          <SEGMENTS/>
+        </CONFIG>
+        <CONFIG>
+          <NAME>compact</NAME>
+          <USESEXTERNALMAKEFILE>NO</USESEXTERNALMAKEFILE>
+          <EXTERNALMAKEFILE/>
+          <PART>atmega8</PART>
+          <HEX>1</HEX>
+          <LIST>1</LIST>
+          <MAP>1</MAP>
+          <OUTPUTFILENAME>FemtoOS_XXXXX.elf</OUTPUTFILENAME>
+          <OUTPUTDIR>compact\</OUTPUTDIR>
+          <ISDIRTY>1</ISDIRTY>
+          <OPTIONS/>
+          <INCDIRS>
+            <INCLUDE>..\..\..\MainCode\femtoos_headers\</INCLUDE>
+            <INCLUDE>..\..\..\MainCode\femtoos_devices\</INCLUDE>
+            <INCLUDE>.\</INCLUDE>
+          </INCDIRS>
+          <LIBDIRS/>
+          <LIBS/>
+          <LINKOBJECTS/>
+          <OPTIONSFORALL>-Wall -gdwarf-2 -Os -funsigned-char -fpack-struct -fshort-enums  -mint8  -Wl,--defsym=__stack=xOS+xOSstackShift  --param inline-call-cost=2  -ffunction-sections  -Wl,--gc-sections  -Wl,--relax  -Wno-main  -Winline  -Wundef  -fomit-frame-pointer -DF_CPU=8000000UL -DdefExtGCCstartup=cfgReplace  -DdefExtOptimized=cfgTrue  -DdefExtZeroPageStack=cfgTrue</OPTIONSFORALL>
+          <LINKEROPTIONS> -mint8  -Wl,--defsym=__stack=xOS+xOSstackShift  --param inline-call-cost=2  -ffunction-sections  -Wl,--gc-sections  -Wl,--relax  -Wno-main  -Winline  -Wundef  -fomit-frame-pointer -nostartfiles</LINKEROPTIONS>
+          <SEGMENTS/>
+        </CONFIG>
+      </CONFIGS>
+      <LASTCONFIG>standard</LASTCONFIG>
+      <USES_WINAVR>1</USES_WINAVR>
+  </AVRGCCPLUGIN>
+</AVRStudio>
